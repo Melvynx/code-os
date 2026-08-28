@@ -2,10 +2,10 @@
 
 Code OS is an open-source, read-only inventory and command center for development machines.
 
-Documentation: https://code-os.melvynx.dev/docs
-Skills sync: https://code-os.melvynx.dev/skills-sync
-VPS skills setup: https://code-os.melvynx.dev/skills-sync/vps
-Computer skills setup: https://code-os.melvynx.dev/skills-sync/local
+Documentation: https://code-os.mlvcdn.com/docs
+Skills sync: https://code-os.mlvcdn.com/skills-sync
+VPS skills setup: https://code-os.mlvcdn.com/skills-sync/vps
+Computer skills setup: https://code-os.mlvcdn.com/skills-sync/local
 Source: https://github.com/Melvynx/code-os
 Releases: https://github.com/Melvynx/code-os/releases
 

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { SiteFooter, SiteHeader } from '../components/site-chrome'
 import stylesheet from '../styles.css?url'
 
-const siteUrl = 'https://code-os.melvynx.dev'
+const siteUrl = 'https://code-os.mlvcdn.com'
 
 export const Route = createRootRoute({
   head: () => ({

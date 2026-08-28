@@ -8,7 +8,7 @@ export const Route = createFileRoute('/skills-sync')({
       { title: 'Skills Sync — Code OS' },
       { name: 'description', content: 'Synchronize your agent skills between a VPS and your computer through a private Git repository.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://code-os.melvynx.dev/skills-sync' }],
+    links: [{ rel: 'canonical', href: 'https://code-os.mlvcdn.com/skills-sync' }],
   }),
   component: SkillsSyncPage,
 })

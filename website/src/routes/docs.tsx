@@ -10,7 +10,7 @@ export const Route = createFileRoute('/docs')({
       { title: 'Documentation — Code OS' },
       { name: 'description', content: 'Install, configure, and operate Code OS on a local machine or VPS.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://code-os.melvynx.dev/docs' }],
+    links: [{ rel: 'canonical', href: 'https://code-os.mlvcdn.com/docs' }],
   }),
   component: DocsPage,
 })

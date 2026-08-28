@@ -12,12 +12,12 @@ go build -o bin/code-os ./cmd/code-os
   --projects-root /root/projects \
   --screenshots-root ~/.local/share/code-os/screenshots \
   --files-root ~/.local/share/code-os/files \
-  --dashboard-host code-os.melvynx.dev \
+  --dashboard-host code-os.mlvcdn.com \
   --dashboard-username code-os \
   --dashboard-password-file ~/.config/code-os/dashboard-password \
   --dashboard-bypass-key-file ~/.config/code-os/media-bypass-key \
   --dashboard-session-key-file ~/.config/code-os/session-key \
-  --public-port-host 'port{port}.melvynx.dev' \
+  --public-port-host 'port{port}.mlvcdn.com' \
   --skills-repository git@github.com:YOUR_ACCOUNT/agents-config.git \
   --skills-directory ~/.agents
 ./bin/code-os dashboard

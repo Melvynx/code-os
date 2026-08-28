@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://code-os.melvynx.dev/sitemap.xml
+Sitemap: https://code-os.mlvcdn.com/sitemap.xml

@@ -7,7 +7,7 @@ export const Route = createFileRoute('/skills-sync_/vps')({
       { title: 'VPS Skills Sync Setup — Code OS' },
       { name: 'description', content: 'Publish and automatically synchronize the VPS agent skill library through a private Git repository.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://code-os.melvynx.dev/skills-sync/vps' }],
+    links: [{ rel: 'canonical', href: 'https://code-os.mlvcdn.com/skills-sync/vps' }],
   }),
   component: VpsSkillsSyncPage,
 })
@@ -36,7 +36,7 @@ gh repo create code-os-skills --private --source=. --remote=origin --push`}</Syn
   {
     title: 'Install the sync worker',
     children: <><p>Open <code>/app/settings</code> and set the private GitHub repository URL, <code>~/.agents</code> checkout, and branch. The worker reads those settings, commits local changes, rebases, and pushes. A directory lock prevents overlapping executions.</p><SyncCode>{`mkdir -p ~/.local/bin
-curl -fsSL https://code-os.melvynx.dev/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
+curl -fsSL https://code-os.mlvcdn.com/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
 chmod 700 ~/.local/bin/code-os-skills-sync
 ~/.local/bin/code-os-skills-sync`}</SyncCode></>,
   },

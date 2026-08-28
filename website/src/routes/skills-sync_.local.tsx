@@ -7,7 +7,7 @@ export const Route = createFileRoute('/skills-sync_/local')({
       { title: 'Computer Skills Sync Setup — Code OS' },
       { name: 'description', content: 'Connect a Mac or local development computer to the shared private agent skill library.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://code-os.melvynx.dev/skills-sync/local' }],
+    links: [{ rel: 'canonical', href: 'https://code-os.mlvcdn.com/skills-sync/local' }],
   }),
   component: LocalSkillsSyncPage,
 })
@@ -31,7 +31,7 @@ echo "Previous local skills: $backup_dir"`}</SyncCode><SyncNotice>Do not delete 
   {
     title: 'Install the same worker',
     children: <><p>Configure the same repository, checkout, and branch in the local Code OS dashboard. Both machines then use the identical audited command and private Git branch. Run it once interactively before scheduling it.</p><SyncCode>{`mkdir -p ~/.local/bin
-curl -fsSL https://code-os.melvynx.dev/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
+curl -fsSL https://code-os.mlvcdn.com/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
 chmod 700 ~/.local/bin/code-os-skills-sync
 ~/.local/bin/code-os-skills-sync`}</SyncCode></>,
   },

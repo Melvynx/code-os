@@ -11,7 +11,7 @@ export function CodeOSWindow() {
     <div className="product-window" aria-label="Code OS command center preview">
       <div className="window-bar">
         <span className="window-dot" /><span className="window-dot" /><span className="window-dot" />
-        <span className="window-address">code-os.melvynx.dev</span>
+        <span className="window-address">code-os.mlvcdn.com</span>
       </div>
       <div className="window-body">
         <aside className="demo-sidebar">

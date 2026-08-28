@@ -1,4 +1,4 @@
-import{n as e,r as t,t as n}from"./skills-sync-docs-kHsgRz_K.js";import{i as r}from"./index-sdA2Jn-t.js";var i=r(),a=[{title:`Prepare Git authentication`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Use GitHub CLI over HTTPS so the LaunchAgent can authenticate through the macOS Keychain without depending on an interactive SSH agent.`}),(0,i.jsx)(n,{children:`gh auth status || gh auth login
+import{n as e,r as t,t as n}from"./skills-sync-docs-D0By4tkc.js";import{i as r}from"./index-CZop_SAX.js";var i=r(),a=[{title:`Prepare Git authentication`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Use GitHub CLI over HTTPS so the LaunchAgent can authenticate through the macOS Keychain without depending on an interactive SSH agent.`}),(0,i.jsx)(n,{children:`gh auth status || gh auth login
 gh config set git_protocol https
 gh auth setup-git
 git config --global user.name "YOUR_NAME"
@@ -6,7 +6,7 @@ git config --global user.email "YOUR_EMAIL"`})]})},{title:`Preserve the local li
 if [ -d ~/.agents ]; then mv ~/.agents "$backup_dir"; fi
 git clone https://github.com/YOUR_ACCOUNT/code-os-skills.git ~/.agents
 echo "Previous local skills: $backup_dir"`}),(0,i.jsx)(t,{children:`Do not delete the backup. Compare it with the cloned library and manually copy only the local skills or rules you still need.`})]})},{title:`Install the same worker`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Configure the same repository, checkout, and branch in the local Code OS dashboard. Both machines then use the identical audited command and private Git branch. Run it once interactively before scheduling it.`}),(0,i.jsx)(n,{children:`mkdir -p ~/.local/bin
-curl -fsSL https://code-os.melvynx.dev/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
+curl -fsSL https://code-os.mlvcdn.com/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
 chmod 700 ~/.local/bin/code-os-skills-sync
 ~/.local/bin/code-os-skills-sync`})]})},{title:`Schedule it with launchd`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsxs)(`p`,{children:[`The LaunchAgent starts after login and runs every two minutes. Logs stay in `,(0,i.jsx)(`code`,{children:`~/Library/Logs/CodeOS`}),`.`]}),(0,i.jsx)(n,{children:`mkdir -p ~/Library/LaunchAgents ~/Library/Logs/CodeOS
 cat > ~/Library/LaunchAgents/dev.code-os.skills-sync.plist <<'EOF'

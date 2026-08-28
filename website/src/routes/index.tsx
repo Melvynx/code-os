@@ -5,7 +5,7 @@ import { CodeOSWindow } from '../components/code-os-window'
 import { repositoryUrl } from '../components/site-chrome'
 
 export const Route = createFileRoute('/')({
-  head: () => ({ links: [{ rel: 'canonical', href: 'https://code-os.melvynx.dev' }] }),
+  head: () => ({ links: [{ rel: 'canonical', href: 'https://code-os.mlvcdn.com' }] }),
   component: HomePage,
 })
 
