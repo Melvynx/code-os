@@ -2,4 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://stackend.codelynx.dev/</loc></url>
   <url><loc>https://stackend.codelynx.dev/docs</loc></url>
+  <url><loc>https://stackend.codelynx.dev/skills-sync</loc></url>
+  <url><loc>https://stackend.codelynx.dev/skills-sync/vps</loc></url>
+  <url><loc>https://stackend.codelynx.dev/skills-sync/local</loc></url>
 </urlset>

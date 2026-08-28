@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ArrowUpRight, Info, ShieldCheck } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ArrowRight, ArrowUpRight, Info, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { repositoryUrl } from '../components/site-chrome'
 
@@ -45,7 +46,8 @@ function DocsPage() {
         <article className="docs-content">
           <DocsSection id="overview" title="Overview">
             <p>StackEnv is a read-only inventory and command center for local or remote development machines. It discovers projects and Git worktrees, reads Portly process state, indexes screenshots, and serves the result through an authenticated dashboard.</p>
-            <div className="notice"><Info /><p><b>Current boundary</b> StackEnv observes your environment. It does not mutate Git repositories, synchronize skills, or replace Portly and Cloudflare.</p></div>
+            <div className="notice"><Info /><p><b>Current boundary</b> StackEnv observes your environment and does not mutate Git repositories. Skill synchronization currently uses the documented private Git worker rather than native CLI commands.</p></div>
+            <Link className="docs-feature-link" to="/skills-sync"><span>NEW GUIDE</span><b>Synchronize skills between your VPS and computer</b><ArrowRight /></Link>
           </DocsSection>
 
           <DocsSection id="install" title="Installation">

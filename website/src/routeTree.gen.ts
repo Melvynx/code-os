@@ -9,9 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SkillsSyncRouteImport } from './routes/skills-sync'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SkillsSyncVpsRouteImport } from './routes/skills-sync_.vps'
+import { Route as SkillsSyncLocalRouteImport } from './routes/skills-sync_.local'
 
+const SkillsSyncRoute = SkillsSyncRouteImport.update({
+  id: '/skills-sync',
+  path: '/skills-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsRoute = DocsRouteImport.update({
   id: '/docs',
   path: '/docs',
@@ -22,35 +30,71 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SkillsSyncVpsRoute = SkillsSyncVpsRouteImport.update({
+  id: '/skills-sync_/vps',
+  path: '/skills-sync/vps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkillsSyncLocalRoute = SkillsSyncLocalRouteImport.update({
+  id: '/skills-sync_/local',
+  path: '/skills-sync/local',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/docs': typeof DocsRoute
+  '/skills-sync': typeof SkillsSyncRoute
+  '/skills-sync/local': typeof SkillsSyncLocalRoute
+  '/skills-sync/vps': typeof SkillsSyncVpsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/docs': typeof DocsRoute
+  '/skills-sync': typeof SkillsSyncRoute
+  '/skills-sync/local': typeof SkillsSyncLocalRoute
+  '/skills-sync/vps': typeof SkillsSyncVpsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/docs': typeof DocsRoute
+  '/skills-sync': typeof SkillsSyncRoute
+  '/skills-sync_/local': typeof SkillsSyncLocalRoute
+  '/skills-sync_/vps': typeof SkillsSyncVpsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/docs'
+  fullPaths:
+    '/' | '/docs' | '/skills-sync' | '/skills-sync/local' | '/skills-sync/vps'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/docs'
-  id: '__root__' | '/' | '/docs'
+  to: '/' | '/docs' | '/skills-sync' | '/skills-sync/local' | '/skills-sync/vps'
+  id:
+    | '__root__'
+    | '/'
+    | '/docs'
+    | '/skills-sync'
+    | '/skills-sync_/local'
+    | '/skills-sync_/vps'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DocsRoute: typeof DocsRoute
+  SkillsSyncRoute: typeof SkillsSyncRoute
+  SkillsSyncLocalRoute: typeof SkillsSyncLocalRoute
+  SkillsSyncVpsRoute: typeof SkillsSyncVpsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/skills-sync': {
+      id: '/skills-sync'
+      path: '/skills-sync'
+      fullPath: '/skills-sync'
+      preLoaderRoute: typeof SkillsSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs': {
       id: '/docs'
       path: '/docs'
@@ -65,12 +109,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/skills-sync_/vps': {
+      id: '/skills-sync_/vps'
+      path: '/skills-sync/vps'
+      fullPath: '/skills-sync/vps'
+      preLoaderRoute: typeof SkillsSyncVpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills-sync_/local': {
+      id: '/skills-sync_/local'
+      path: '/skills-sync/local'
+      fullPath: '/skills-sync/local'
+      preLoaderRoute: typeof SkillsSyncLocalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DocsRoute: DocsRoute,
+  SkillsSyncRoute: SkillsSyncRoute,
+  SkillsSyncLocalRoute: SkillsSyncLocalRoute,
+  SkillsSyncVpsRoute: SkillsSyncVpsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

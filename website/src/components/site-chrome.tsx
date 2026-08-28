@@ -24,6 +24,7 @@ export function SiteHeader() {
           <a href="/#command-center" onClick={() => setOpen(false)}>Command center</a>
           <a href="/#capabilities" onClick={() => setOpen(false)}>Capabilities</a>
           <a href="/#security" onClick={() => setOpen(false)}>Security</a>
+          <Link to="/skills-sync" onClick={() => setOpen(false)}>Skills sync</Link>
           <Link to="/docs" onClick={() => setOpen(false)}>Docs</Link>
         </nav>
         <div className="header-actions">
@@ -50,6 +51,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-links">
           <Link to="/docs">Documentation</Link>
+          <Link to="/skills-sync">Skills Sync</Link>
           <a href={`${repositoryUrl}/releases`} target="_blank" rel="noreferrer">Releases</a>
           <a href={repositoryUrl} target="_blank" rel="noreferrer">Source</a>
           <a href={`${repositoryUrl}/blob/main/LICENSE`} target="_blank" rel="noreferrer">MIT License</a>

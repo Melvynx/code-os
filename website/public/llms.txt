@@ -3,6 +3,9 @@
 StackEnv is an open-source, read-only inventory and command center for development machines.
 
 Documentation: https://stackend.codelynx.dev/docs
+Skills sync: https://stackend.codelynx.dev/skills-sync
+VPS skills setup: https://stackend.codelynx.dev/skills-sync/vps
+Computer skills setup: https://stackend.codelynx.dev/skills-sync/local
 Source: https://github.com/Melvynx/stackenv
 Releases: https://github.com/Melvynx/stackenv/releases
 
@@ -13,3 +16,4 @@ Core concepts:
 - Serve an authenticated dashboard and API on loopback.
 - Allow optional, scoped media bypass URLs for coding agents.
 - Expose the dashboard through Cloudflare Tunnel.
+- Synchronize ~/.agents between a VPS and computer using the documented private Git worker.
