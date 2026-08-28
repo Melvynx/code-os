@@ -108,8 +108,9 @@ func setup(arguments []string) error {
 	accountID := flags.String("cloudflare-account-id", "", "Cloudflare account ID")
 	zoneID := flags.String("cloudflare-zone-id", "", "Cloudflare zone ID")
 	tokenFile := flags.String("cloudflare-token-file", "", "path to a scoped Cloudflare token")
-	authUsername := flags.String("dashboard-username", "", "dashboard basic-auth username")
-	authPasswordFile := flags.String("dashboard-password-file", "", "path to dashboard basic-auth password")
+	authUsername := flags.String("dashboard-username", "", "dashboard sign-in username")
+	authPasswordFile := flags.String("dashboard-password-file", "", "path to dashboard password")
+	authBypassKeyFile := flags.String("dashboard-bypass-key-file", "", "path to the media-only bypass key")
 	nonInteractive := flags.Bool("non-interactive", false, "do not prompt for missing values")
 	if err := flags.Parse(arguments); err != nil {
 		return err
@@ -138,9 +139,17 @@ func setup(arguments []string) error {
 		AccountID: strings.TrimSpace(*accountID), ZoneID: strings.TrimSpace(*zoneID),
 		TokenFile: expandOptionalPath(*tokenFile), RequireAccess: true,
 	}
-	cfg.Auth = config.Auth{Username: strings.TrimSpace(*authUsername), PasswordFile: expandOptionalPath(*authPasswordFile)}
+	cfg.Auth = config.Auth{
+		Username: strings.TrimSpace(*authUsername), PasswordFile: expandOptionalPath(*authPasswordFile),
+		BypassKeyFile: expandOptionalPath(*authBypassKeyFile),
+	}
 	if cfg.Auth.PasswordFile != "" {
 		if err := ensurePasswordFile(cfg.Auth.PasswordFile); err != nil {
+			return err
+		}
+	}
+	if cfg.Auth.BypassKeyFile != "" {
+		if err := ensurePasswordFile(cfg.Auth.BypassKeyFile); err != nil {
 			return err
 		}
 	}
@@ -152,6 +161,9 @@ func setup(arguments []string) error {
 	if cfg.Auth.PasswordFile != "" {
 		fmt.Printf("Public hostname: https://%s (origin authentication enabled)\n", cfg.Cloudflare.DashboardHost)
 		fmt.Printf("Dashboard credentials: user %s, password in %s\n", cfg.Auth.Username, cfg.Auth.PasswordFile)
+		if cfg.Auth.BypassKeyFile != "" {
+			fmt.Printf("Media bypass key: %s\n", cfg.Auth.BypassKeyFile)
+		}
 	} else {
 		fmt.Printf("Public hostname: https://%s (Cloudflare Access required)\n", cfg.Cloudflare.DashboardHost)
 	}
@@ -270,7 +282,10 @@ func doctor(arguments []string) error {
 		{"Cloudflare Access policy", "must be enabled before publishing", cfg.Cloudflare.RequireAccess, true},
 	}
 	if cfg.Auth.PasswordFile != "" {
-		checks = append(checks, check{"Dashboard authentication", cfg.Auth.Username, isRegularFile(cfg.Auth.PasswordFile), true})
+		checks = append(checks, check{"Dashboard authentication", cfg.Auth.Username, isPrivateRegularFile(cfg.Auth.PasswordFile), true})
+	}
+	if cfg.Auth.BypassKeyFile != "" {
+		checks = append(checks, check{"Media bypass key", cfg.Auth.BypassKeyFile, isPrivateRegularFile(cfg.Auth.BypassKeyFile), true})
 	}
 	for _, root := range cfg.ProjectsRoots {
 		checks = append(checks, check{"Projects root", root, isDirectory(root), true})
@@ -427,6 +442,9 @@ func expandOptionalPath(path string) string {
 
 func ensurePasswordFile(path string) error {
 	if isRegularFile(path) {
+		if err := os.Chmod(path, 0o600); err != nil {
+			return fmt.Errorf("secure secret file: %w", err)
+		}
 		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -468,6 +486,11 @@ func isDirectory(path string) bool {
 func isRegularFile(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.Mode().IsRegular()
+}
+
+func isPrivateRegularFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular() && info.Mode().Perm() == 0o600
 }
 
 func commandExists(command string) bool {

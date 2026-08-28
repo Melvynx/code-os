@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/subtle"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/melvynx/stackenv/internal/config"
+	"github.com/melvynx/stackenv/internal/dashboard"
 	"github.com/melvynx/stackenv/internal/model"
 )
 
@@ -28,18 +28,22 @@ type HTTPServer struct {
 }
 
 func (server HTTPServer) Handler() (http.Handler, error) {
-	assets, err := fs.Sub(webAssets, "web")
+	loginAssets, err := fs.Sub(webAssets, "web")
 	if err != nil {
-		return nil, fmt.Errorf("load embedded dashboard: %w", err)
+		return nil, fmt.Errorf("load embedded login: %w", err)
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/overview", server.overview)
-	mux.HandleFunc("GET /api/snapshot", server.snapshot)
-	mux.HandleFunc("POST /api/refresh", server.refresh)
-	mux.HandleFunc("GET /api/health", server.health)
-	mux.HandleFunc("GET /media/{id}", server.media)
-	mux.Handle("GET /", http.FileServer(http.FS(assets)))
-	handler := server.securityHeaders(server.requestLog(mux))
+	dashboardAssets, err := dashboard.Assets()
+	if err != nil {
+		return nil, err
+	}
+	protected := http.NewServeMux()
+	protected.HandleFunc("GET /api/overview", server.overview)
+	protected.HandleFunc("GET /api/snapshot", server.snapshot)
+	protected.HandleFunc("POST /api/refresh", server.refresh)
+	protected.HandleFunc("GET /api/health", server.health)
+	protected.HandleFunc("GET /media/{id}", server.media)
+	protected.Handle("GET /", singlePageApplication(dashboardAssets))
+	var handler http.Handler = protected
 	if server.Config.Auth.PasswordFile != "" {
 		password, err := os.ReadFile(server.Config.Auth.PasswordFile)
 		if err != nil {
@@ -49,9 +53,30 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 		if secret == "" {
 			return nil, fmt.Errorf("dashboard password file is empty")
 		}
-		handler = basicAuth(handler, server.Config.Auth.Username, secret)
+		bypassKey := ""
+		if server.Config.Auth.BypassKeyFile != "" {
+			bypass, err := os.ReadFile(server.Config.Auth.BypassKeyFile)
+			if err != nil {
+				return nil, fmt.Errorf("read media bypass key: %w", err)
+			}
+			bypassKey = strings.TrimSpace(string(bypass))
+			if bypassKey == "" {
+				return nil, fmt.Errorf("media bypass key file is empty")
+			}
+		}
+		auth, err := newAuthenticator(loginAssets, server.Config.Auth.Username, secret, bypassKey)
+		if err != nil {
+			return nil, err
+		}
+		public := http.NewServeMux()
+		public.HandleFunc("GET /login", auth.loginPage)
+		public.HandleFunc("GET /login.css", auth.loginStyles)
+		public.HandleFunc("POST /auth/login", auth.login)
+		public.HandleFunc("POST /auth/logout", auth.logout)
+		public.Handle("/", auth.protect(protected))
+		handler = public
 	}
-	return handler, nil
+	return server.securityHeaders(server.requestLog(handler)), nil
 }
 
 func (server HTTPServer) overview(response http.ResponseWriter, _ *http.Request) {
@@ -101,7 +126,12 @@ func (server HTTPServer) media(response http.ResponseWriter, request *http.Reque
 	if strings.EqualFold(filepath.Ext(path), ".svg") {
 		response.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:")
 	}
-	response.Header().Set("Cache-Control", "private, max-age=300")
+	if isMediaBypass(request) {
+		response.Header().Set("Cache-Control", "private, no-store")
+		response.Header().Set("Pragma", "no-cache")
+	} else {
+		response.Header().Set("Cache-Control", "private, max-age=300")
+	}
 	http.ServeContent(response, request, info.Name(), info.ModTime(), file)
 }
 
@@ -129,18 +159,4 @@ func writeJSON(response http.ResponseWriter, status int, value any) {
 	response.Header().Set("Content-Type", "application/json; charset=utf-8")
 	response.WriteHeader(status)
 	_ = json.NewEncoder(response).Encode(value)
-}
-
-func basicAuth(next http.Handler, username, password string) http.Handler {
-	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		providedUser, providedPassword, ok := request.BasicAuth()
-		userMatches := subtle.ConstantTimeCompare([]byte(providedUser), []byte(username)) == 1
-		passwordMatches := subtle.ConstantTimeCompare([]byte(providedPassword), []byte(password)) == 1
-		if !ok || !userMatches || !passwordMatches {
-			response.Header().Set("WWW-Authenticate", `Basic realm="StackEnv Command Center", charset="UTF-8"`)
-			http.Error(response, "Authentication required", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(response, request)
-	})
 }

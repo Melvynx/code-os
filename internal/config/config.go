@@ -23,8 +23,9 @@ type Cloudflare struct {
 }
 
 type Auth struct {
-	Username     string `json:"username,omitempty"`
-	PasswordFile string `json:"passwordFile,omitempty"`
+	Username      string `json:"username,omitempty"`
+	PasswordFile  string `json:"passwordFile,omitempty"`
+	BypassKeyFile string `json:"bypassKeyFile,omitempty"`
 }
 
 type Config struct {
@@ -157,6 +158,9 @@ func (cfg Config) Validate() error {
 	}
 	if (cfg.Auth.Username == "") != (cfg.Auth.PasswordFile == "") {
 		problems = append(problems, "auth username and passwordFile must be configured together")
+	}
+	if cfg.Auth.BypassKeyFile != "" && cfg.Auth.PasswordFile == "" {
+		problems = append(problems, "auth bypassKeyFile requires username and passwordFile")
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf("invalid config: %w", errors.New(strings.Join(problems, "; ")))

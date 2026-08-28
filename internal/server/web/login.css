@@ -1,0 +1,177 @@
+:root {
+  color-scheme: dark;
+  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  background: #000;
+  color: #fff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background-color: #000;
+}
+
+.shell {
+  width: min(780px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 44px 0 96px;
+}
+
+.masthead {
+  padding-bottom: 24px;
+  border-bottom: 1px solid #333;
+}
+
+.masthead p {
+  margin: 0;
+  color: #888;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.masthead .wordmark {
+  color: #fff;
+  font-size: 14px;
+}
+
+.context {
+  padding: 52px 0;
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+}
+
+.context span {
+  margin-left: 8px;
+}
+
+.login-section {
+  padding-top: 8px;
+}
+
+.section-label {
+  margin: 0 0 24px;
+  color: #888;
+  font-size: 13px;
+}
+
+.intro {
+  margin-bottom: 30px;
+  padding: 20px 18px;
+  border: 1px solid #333;
+}
+
+h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.intro p:last-child {
+  margin: 8px 0 0;
+  color: #888;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.error {
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid #e00;
+  color: #fff;
+  font-size: 14px;
+}
+
+form {
+  display: grid;
+  gap: 22px;
+}
+
+.field {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  color: #888;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+input {
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 18px;
+  border: 1px solid #333;
+  border-radius: 0;
+  outline: none;
+  background: #000;
+  color: #fff;
+  font: inherit;
+}
+
+input:focus-visible {
+  border-color: #fff;
+  outline: 1px solid #fff;
+  outline-offset: 0;
+}
+
+button {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border: 1px solid #333;
+  border-radius: 0;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #111;
+  border-color: #fff;
+}
+
+button:focus-visible {
+  outline: 1px solid #fff;
+  outline-offset: 2px;
+}
+
+footer {
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid #333;
+  color: #888;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .shell {
+    width: min(100% - 32px, 780px);
+    padding: 28px 0 64px;
+  }
+
+  .context {
+    padding: 40px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
