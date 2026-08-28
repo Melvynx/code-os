@@ -16,6 +16,9 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
@@ -33,6 +36,21 @@
   --primary: #fff;
   --primary-foreground: #000;
   --destructive: #e00;
+  --success: #50e3c2;
+  --warning: oklch(71.96% 0.1401 79.91);
+  --info: oklch(71.53% 0.1518 253.31);
+  --git-modified: oklch(71.96% 0.1401 79.91);
+  --git-modified-surface: oklch(18% 0.025 79.91);
+  --git-added: oklch(69.51% 0.1809 145.62);
+  --git-added-surface: oklch(18% 0.03 145.62);
+  --git-deleted: oklch(66.51% 0.2046 26.96);
+  --git-deleted-surface: oklch(18% 0.035 26.96);
+  --git-untracked: oklch(66.06% 0.1935 298.14);
+  --git-untracked-surface: oklch(18% 0.03 298.14);
+  --git-conflict: oklch(73.45% 0.1626 25.78);
+  --git-conflict-surface: oklch(18% 0.035 25.78);
+  --git-info: oklch(71.53% 0.1518 253.31);
+  --git-info-surface: oklch(18% 0.025 253.31);
 }
 
 * {

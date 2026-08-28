@@ -63,7 +63,7 @@ function OverviewPage() {
             {visibleChanges.length ? visibleChanges.slice(0, 5).map((project) => (
               <div key={project.id} className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-[#111]">
                 <div className="min-w-0"><p className="truncate text-sm font-medium text-white">{project.name}</p><p className="mt-1 truncate font-mono text-xs text-[#888]">{project.git.branch || "Detached"}</p></div>
-                <Badge variant={project.git.conflicts ? "error" : "warning"}>{getChangeCount(project)} changes</Badge>
+                <Badge variant={project.git.conflicts ? "conflict" : "modified"}>{getChangeCount(project)} changes</Badge>
               </div>
             )) : <EmptyState title="Every repository is clean" description="No Git changes match this search." />}
           </div>
