@@ -1,0 +1,15 @@
+# StackEnv
+
+StackEnv is an open-source, read-only inventory and command center for development machines.
+
+Documentation: https://stackend.codelynx.dev/docs
+Source: https://github.com/Melvynx/stackenv
+Releases: https://github.com/Melvynx/stackenv/releases
+
+Core concepts:
+- Discover projects, nested applications, and all Git worktrees.
+- Read Portly-supervised application state.
+- Index screenshots by feature.
+- Serve an authenticated dashboard and API on loopback.
+- Allow optional, scoped media bypass URLs for coding agents.
+- Expose the dashboard through Cloudflare Tunnel.

@@ -1,0 +1,10 @@
+{
+  "name": "StackEnv",
+  "short_name": "StackEnv",
+  "description": "One command center for every development environment.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090b10",
+  "theme_color": "#090b10",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
