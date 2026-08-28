@@ -1,12 +1,15 @@
 package server
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/melvynx/code-os/internal/config"
 )
@@ -82,6 +85,35 @@ func TestWrongBypassKeyCannotAccessMedia(t *testing.T) {
 
 	fixture.handler.ServeHTTP(response, request)
 
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", response.Code)
+	}
+}
+
+func TestTamperedSessionCookieIsRejected(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+	cookie := loginFixture(t, fixture)
+	cookie.Value += "tampered"
+	request := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", response.Code)
+	}
+}
+
+func TestExpiredSessionCookieIsRejected(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+	auth := authenticator{username: "code-os", sessionKey: []byte("0123456789abcdef0123456789abcdef\n")}
+	payload := base64.RawURLEncoding.EncodeToString([]byte("code-os\n" + fmt.Sprint(time.Now().Add(-time.Hour).Unix())))
+	cookie := &http.Cookie{Name: sessionCookieName, Value: payload + "." + auth.sign(payload)}
+	request := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", response.Code)
 	}
