@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/melvynx/stackenv/internal/config"
+	"github.com/melvynx/code-os/internal/config"
 )
 
 type authFixture struct {
@@ -17,18 +17,28 @@ type authFixture struct {
 	bypassKey string
 }
 
-func TestAnonymousBrowserGetsLoginPageInsteadOfBasicAuthDialog(t *testing.T) {
+func TestPublicLandingStaysAvailableWithoutAuthentication(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)
 	response := httptest.NewRecorder()
 
 	fixture.handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
 
-	if response.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want 303", response.Code)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.Code)
 	}
-	if location := response.Header().Get("Location"); location != "/login?next=%2F" {
-		t.Fatalf("Location = %q, want login redirect", location)
+	if challenge := response.Header().Get("WWW-Authenticate"); challenge != "" {
+		t.Fatalf("WWW-Authenticate = %q, want no browser dialog", challenge)
+	}
+}
+
+func TestAnonymousDashboardGetsLoginPageInsteadOfBasicAuthDialog(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/app/projects", nil))
+	if response.Code != http.StatusSeeOther || !strings.HasPrefix(response.Header().Get("Location"), "/login?next=") {
+		t.Fatalf("dashboard response = %d location %q", response.Code, response.Header().Get("Location"))
 	}
 	if challenge := response.Header().Get("WWW-Authenticate"); challenge != "" {
 		t.Fatalf("WWW-Authenticate = %q, want no browser dialog", challenge)
@@ -101,15 +111,15 @@ func TestLoginPageSupportsPasswordManagers(t *testing.T) {
 func TestLoginRejectsExternalRedirect(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)
-	body := strings.NewReader("username=stackenv&password=correct-horse&next=https%3A%2F%2Fevil.example")
+	body := strings.NewReader("username=code-os&password=correct-horse&next=https%3A%2F%2Fevil.example")
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", body)
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response := httptest.NewRecorder()
 
 	fixture.handler.ServeHTTP(response, request)
 
-	if location := response.Header().Get("Location"); location != "/" {
-		t.Fatalf("Location = %q, want /", location)
+	if location := response.Header().Get("Location"); location != "/app/" {
+		t.Fatalf("Location = %q, want /app/", location)
 	}
 }
 
@@ -117,7 +127,7 @@ func TestAuthenticatedClientGetsSPAForRouterPath(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)
 	sessionCookie := loginFixture(t, fixture)
-	request := httptest.NewRequest(http.MethodGet, "/projects", nil)
+	request := httptest.NewRequest(http.MethodGet, "/app/projects", nil)
 	request.AddCookie(sessionCookie)
 	response := httptest.NewRecorder()
 
@@ -165,7 +175,7 @@ func TestAuthenticatedUnknownAPIStaysNotFound(t *testing.T) {
 func TestLoginFormCreatesSessionForPasswordManagerFlow(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)
-	body := strings.NewReader("username=stackenv&password=correct-horse&next=%2F")
+	body := strings.NewReader("username=code-os&password=correct-horse&next=%2F")
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", body)
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response := httptest.NewRecorder()
@@ -193,7 +203,7 @@ func TestLoginFormCreatesSessionForPasswordManagerFlow(t *testing.T) {
 
 func loginFixture(t *testing.T, fixture authFixture) *http.Cookie {
 	t.Helper()
-	body := strings.NewReader("username=stackenv&password=correct-horse&next=%2F")
+	body := strings.NewReader("username=code-os&password=correct-horse&next=%2F")
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", body)
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response := httptest.NewRecorder()
@@ -209,16 +219,18 @@ func newAuthFixture(t *testing.T) authFixture {
 	directory := t.TempDir()
 	passwordFile := filepath.Join(directory, "password")
 	bypassFile := filepath.Join(directory, "bypass")
+	sessionKeyFile := filepath.Join(directory, "session-key")
 	imagePath := filepath.Join(directory, "image.png")
 	writeFixtureFile(t, passwordFile, "correct-horse\n")
 	writeFixtureFile(t, bypassFile, "media-only-key\n")
+	writeFixtureFile(t, sessionKeyFile, "0123456789abcdef0123456789abcdef\n")
 	writeFixtureFile(t, imagePath, "not-a-real-png")
 	service := &Service{media: map[string]string{"image": imagePath}}
 	httpServer := HTTPServer{
 		Config: config.Config{
 			EnvironmentName: "test",
 			Auth: config.Auth{
-				Username: "stackenv", PasswordFile: passwordFile, BypassKeyFile: bypassFile,
+				Username: "code-os", PasswordFile: passwordFile, BypassKeyFile: bypassFile, SessionKeyFile: sessionKeyFile,
 			},
 		},
 		Service: service,

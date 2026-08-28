@@ -1,8 +1,8 @@
-# StackEnv
+# Code OS
 
 ## Product contract
 
-- StackEnv is a cross-platform command center for local and remote development environments.
+- Code OS is a cross-platform command center for local and remote development environments.
 - The daemon must listen on loopback by default. Public access is provided through an authenticated tunnel.
 - Git inspection is read-only in the first milestone. Never discard, stage, commit, or push user changes.
 - Portly remains the source of truth for persistent development processes.
@@ -22,4 +22,4 @@
 - Build the embedded dashboard first with `pnpm --dir internal/dashboard build`.
 - Run `pnpm --dir internal/dashboard typecheck` and `pnpm --dir internal/dashboard test`.
 - Format with `gofmt -w`.
-- Run `go test ./...`, `go vet ./...`, and `go build ./cmd/stackenv` before handoff.
+- Run `go test ./...`, `go vet ./...`, and `go build ./cmd/code-os` before handoff.

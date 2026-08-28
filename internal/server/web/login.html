@@ -5,30 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Sign in — StackEnv</title>
-    <link rel="stylesheet" href="/login.css?v=black-grid-2" />
+    <title>{{.PageTitle}}</title>
+    <link rel="stylesheet" href="{{.StylesheetPath}}" />
   </head>
   <body>
     <main class="shell" aria-labelledby="login-title">
       <header class="masthead">
-        <p class="wordmark">STACKENV</p>
+        <p class="wordmark">CODE OS</p>
         <p>Projects, processes, Git state, and visual evidence</p>
       </header>
 
-      <div class="context" aria-hidden="true">Private development environment <span>→</span></div>
+      <div class="context" aria-hidden="true">{{.Context}} <span>→</span></div>
 
       <section class="login-section">
         <p class="section-label">AUTHENTICATION</p>
         <div class="intro">
-          <h1 id="login-title">Sign in to StackEnv</h1>
-          <p>Use the credentials configured on this environment.</p>
+          <h1 id="login-title">{{.Heading}}</h1>
+          <p>{{.Description}}</p>
         </div>
 
         {{if .InvalidCredentials}}
           <div class="error" role="alert">The username or password is incorrect.</div>
         {{end}}
 
-        <form method="post" action="/auth/login">
+        <form method="post" action="{{.FormAction}}">
           <input type="hidden" name="next" value="{{.Next}}" />
           <div class="field">
             <label for="username">USERNAME</label>

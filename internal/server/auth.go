@@ -3,23 +3,27 @@ package server
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io/fs"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
-	sessionCookieName = "stackenv_session"
-	sessionDuration   = 12 * time.Hour
+	sessionCookieName        = "code-os_session"
+	gatewaySessionCookieName = "code-os_gateway_session"
+	sessionDuration          = 12 * time.Hour
+	loginAttemptWindow       = 5 * time.Minute
+	maxLoginAttempts         = 5
 )
 
 type mediaBypassContextKey struct{}
@@ -31,14 +35,55 @@ type authenticator struct {
 	sessionKey      []byte
 	loginTemplate   *template.Template
 	loginStylesheet []byte
+	attemptsMutex   sync.Mutex
+	attempts        map[string]loginAttempt
 }
 
 type loginPageData struct {
 	InvalidCredentials bool
 	Next               string
+	StylesheetPath     string
+	FormAction         string
+	PageTitle          string
+	Heading            string
+	Description        string
+	Context            string
 }
 
-func newAuthenticator(assets fs.FS, username, password, bypassKey string) (*authenticator, error) {
+type loginAttempt struct {
+	Count       int
+	WindowStart time.Time
+}
+
+type authSurface struct {
+	CookieName     string
+	LoginPath      string
+	StylesheetPath string
+	LoginAction    string
+	LogoutPath     string
+	PageTitle      string
+	Heading        string
+	Description    string
+	Context        string
+	SameSite       http.SameSite
+	APIsUseJSON401 bool
+}
+
+var dashboardAuthSurface = authSurface{
+	CookieName: sessionCookieName, LoginPath: "/login", StylesheetPath: "/login.css?v=black-grid-2",
+	LoginAction: "/auth/login", LogoutPath: "/auth/logout", PageTitle: "Sign in — Code OS",
+	Heading: "Sign in to Code OS", Description: "Use the credentials configured on this environment.",
+	Context: "Private development environment", SameSite: http.SameSiteStrictMode, APIsUseJSON401: true,
+}
+
+var gatewayAuthSurface = authSurface{
+	CookieName: gatewaySessionCookieName, LoginPath: "/_code-os/login", StylesheetPath: "/_code-os/login.css?v=black-grid-2",
+	LoginAction: "/_code-os/auth/login", LogoutPath: "/_code-os/auth/logout", PageTitle: "Unlock application — Code OS",
+	Heading: "Unlock development app", Description: "Authenticate before opening this private development port.",
+	Context: "Protected by Code OS", SameSite: http.SameSiteLaxMode,
+}
+
+func newAuthenticator(assets fs.FS, username, password, bypassKey string, sessionKey []byte) (*authenticator, error) {
 	loginTemplate, err := template.ParseFS(assets, "login.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse login page: %w", err)
@@ -47,28 +92,63 @@ func newAuthenticator(assets fs.FS, username, password, bypassKey string) (*auth
 	if err != nil {
 		return nil, fmt.Errorf("read login stylesheet: %w", err)
 	}
-	sessionKey := make([]byte, 32)
-	if _, err := rand.Read(sessionKey); err != nil {
-		return nil, fmt.Errorf("generate session key: %w", err)
+	if len(sessionKey) < 32 {
+		return nil, fmt.Errorf("session signing key must contain at least 32 bytes")
 	}
 	return &authenticator{
 		username: username, password: password, bypassKey: bypassKey,
-		sessionKey: sessionKey, loginTemplate: loginTemplate, loginStylesheet: loginStylesheet,
+		sessionKey: append([]byte(nil), sessionKey...), loginTemplate: loginTemplate, loginStylesheet: loginStylesheet,
+		attempts: make(map[string]loginAttempt),
 	}, nil
 }
 
 func (auth *authenticator) protect(next http.Handler) http.Handler {
+	return auth.protectSurface(next, dashboardAuthSurface)
+}
+
+func (auth *authenticator) protectGateway(next http.Handler) http.Handler {
+	return auth.protectSurface(next, gatewayAuthSurface)
+}
+
+func (auth *authenticator) protectFiles(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if auth.hasValidSession(request) {
 			next.ServeHTTP(response, request)
 			return
 		}
-		if auth.hasValidMediaBypass(request) {
+		if auth.hasValidArtifactBypass(request) {
+			query := request.URL.Query()
+			query.Del("bp")
+			ctx := context.WithValue(request.Context(), artifactBypassContextKey{}, true)
+			clone := request.Clone(ctx)
+			clone.URL.RawQuery = query.Encode()
+			next.ServeHTTP(response, clone)
+			return
+		}
+		if request.URL.Query().Has("bp") {
+			writeJSON(response, http.StatusUnauthorized, map[string]string{"error": "invalid file bypass"})
+			return
+		}
+		nextPath := request.URL.RequestURI()
+		if nextPath == "" {
+			nextPath = "/"
+		}
+		http.Redirect(response, request, dashboardAuthSurface.LoginPath+"?next="+url.QueryEscape(nextPath), http.StatusSeeOther)
+	})
+}
+
+func (auth *authenticator) protectSurface(next http.Handler, surface authSurface) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if auth.hasValidSessionFor(request, surface.CookieName) {
+			next.ServeHTTP(response, request)
+			return
+		}
+		if surface.CookieName == sessionCookieName && auth.hasValidMediaBypass(request) {
 			ctx := context.WithValue(request.Context(), mediaBypassContextKey{}, true)
 			next.ServeHTTP(response, request.WithContext(ctx))
 			return
 		}
-		if strings.HasPrefix(request.URL.Path, "/api/") || strings.HasPrefix(request.URL.Path, "/media/") {
+		if surface.APIsUseJSON401 && (strings.HasPrefix(request.URL.Path, "/api/") || strings.HasPrefix(request.URL.Path, "/media/")) {
 			writeJSON(response, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
 			return
 		}
@@ -76,15 +156,23 @@ func (auth *authenticator) protect(next http.Handler) http.Handler {
 		if nextPath == "" {
 			nextPath = "/"
 		}
-		http.Redirect(response, request, "/login?next="+url.QueryEscape(nextPath), http.StatusSeeOther)
+		http.Redirect(response, request, surface.LoginPath+"?next="+url.QueryEscape(nextPath), http.StatusSeeOther)
 	})
 }
 
 func (auth *authenticator) loginPage(response http.ResponseWriter, request *http.Request) {
+	auth.loginPageFor(response, request, dashboardAuthSurface)
+}
+
+func (auth *authenticator) gatewayLoginPage(response http.ResponseWriter, request *http.Request) {
+	auth.loginPageFor(response, request, gatewayAuthSurface)
+}
+
+func (auth *authenticator) loginPageFor(response http.ResponseWriter, request *http.Request, surface authSurface) {
 	nextPath := safeNextPath(request.URL.Query().Get("next"))
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "no-store")
-	if err := auth.loginTemplate.ExecuteTemplate(response, "login.html", loginPageData{Next: nextPath}); err != nil {
+	if err := auth.loginTemplate.ExecuteTemplate(response, "login.html", auth.loginPageData(surface, nextPath, false)); err != nil {
 		http.Error(response, "Unable to render sign in", http.StatusInternalServerError)
 	}
 }
@@ -96,34 +184,55 @@ func (auth *authenticator) loginStyles(response http.ResponseWriter, _ *http.Req
 }
 
 func (auth *authenticator) login(response http.ResponseWriter, request *http.Request) {
+	auth.loginFor(response, request, dashboardAuthSurface)
+}
+
+func (auth *authenticator) gatewayLogin(response http.ResponseWriter, request *http.Request) {
+	auth.loginFor(response, request, gatewayAuthSurface)
+}
+
+func (auth *authenticator) loginFor(response http.ResponseWriter, request *http.Request, surface authSurface) {
 	request.Body = http.MaxBytesReader(response, request.Body, 8<<10)
 	if err := request.ParseForm(); err != nil {
 		http.Error(response, "Invalid form", http.StatusBadRequest)
 		return
 	}
 	nextPath := safeNextPath(request.FormValue("next"))
+	clientKey := loginClientKey(request)
+	if retryAfter, limited := auth.loginRetryAfter(clientKey); limited {
+		response.Header().Set("Retry-After", strconv.Itoa(int(retryAfter.Round(time.Second).Seconds())))
+		http.Error(response, "Too many sign-in attempts", http.StatusTooManyRequests)
+		return
+	}
 	usernameMatches := subtle.ConstantTimeCompare([]byte(request.FormValue("username")), []byte(auth.username)) == 1
 	passwordMatches := subtle.ConstantTimeCompare([]byte(request.FormValue("password")), []byte(auth.password)) == 1
 	if !usernameMatches || !passwordMatches {
+		auth.recordLoginFailure(clientKey)
 		response.Header().Set("Content-Type", "text/html; charset=utf-8")
 		response.Header().Set("Cache-Control", "no-store")
 		response.WriteHeader(http.StatusUnauthorized)
-		_ = auth.loginTemplate.ExecuteTemplate(response, "login.html", loginPageData{
-			InvalidCredentials: true,
-			Next:               nextPath,
-		})
+		_ = auth.loginTemplate.ExecuteTemplate(response, "login.html", auth.loginPageData(surface, nextPath, true))
 		return
 	}
-	auth.setSessionCookie(response, request)
+	auth.clearLoginFailures(clientKey)
+	auth.setSessionCookieFor(response, request, surface)
 	http.Redirect(response, request, nextPath, http.StatusSeeOther)
 }
 
 func (auth *authenticator) logout(response http.ResponseWriter, request *http.Request) {
+	auth.logoutFor(response, request, dashboardAuthSurface)
+}
+
+func (auth *authenticator) gatewayLogout(response http.ResponseWriter, request *http.Request) {
+	auth.logoutFor(response, request, gatewayAuthSurface)
+}
+
+func (auth *authenticator) logoutFor(response http.ResponseWriter, request *http.Request, surface authSurface) {
 	http.SetCookie(response, &http.Cookie{
-		Name: sessionCookieName, Value: "", Path: "/", MaxAge: -1,
-		HttpOnly: true, Secure: requestIsHTTPS(request), SameSite: http.SameSiteStrictMode,
+		Name: surface.CookieName, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: true, Secure: requestIsHTTPS(request), SameSite: surface.SameSite,
 	})
-	http.Redirect(response, request, "/login", http.StatusSeeOther)
+	http.Redirect(response, request, surface.LoginPath, http.StatusSeeOther)
 }
 
 func (auth *authenticator) hasValidMediaBypass(request *http.Request) bool {
@@ -138,19 +247,27 @@ func (auth *authenticator) hasValidMediaBypass(request *http.Request) bool {
 }
 
 func (auth *authenticator) setSessionCookie(response http.ResponseWriter, request *http.Request) {
+	auth.setSessionCookieFor(response, request, dashboardAuthSurface)
+}
+
+func (auth *authenticator) setSessionCookieFor(response http.ResponseWriter, request *http.Request, surface authSurface) {
 	expiresAt := time.Now().Add(sessionDuration)
 	payload := auth.username + "\n" + strconv.FormatInt(expiresAt.Unix(), 10)
 	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
 	signature := auth.sign(encodedPayload)
 	http.SetCookie(response, &http.Cookie{
-		Name: sessionCookieName, Value: encodedPayload + "." + signature, Path: "/",
+		Name: surface.CookieName, Value: encodedPayload + "." + signature, Path: "/",
 		Expires: expiresAt, MaxAge: int(sessionDuration.Seconds()), HttpOnly: true,
-		Secure: requestIsHTTPS(request), SameSite: http.SameSiteStrictMode,
+		Secure: requestIsHTTPS(request), SameSite: surface.SameSite,
 	})
 }
 
 func (auth *authenticator) hasValidSession(request *http.Request) bool {
-	cookie, err := request.Cookie(sessionCookieName)
+	return auth.hasValidSessionFor(request, sessionCookieName)
+}
+
+func (auth *authenticator) hasValidSessionFor(request *http.Request, cookieName string) bool {
+	cookie, err := request.Cookie(cookieName)
 	if err != nil {
 		return false
 	}
@@ -170,6 +287,60 @@ func (auth *authenticator) hasValidSession(request *http.Request) bool {
 	return err == nil && time.Now().Unix() < expiresAt
 }
 
+func (auth *authenticator) loginPageData(surface authSurface, nextPath string, invalid bool) loginPageData {
+	return loginPageData{
+		InvalidCredentials: invalid, Next: nextPath, StylesheetPath: surface.StylesheetPath,
+		FormAction: surface.LoginAction, PageTitle: surface.PageTitle, Heading: surface.Heading,
+		Description: surface.Description, Context: surface.Context,
+	}
+}
+
+func (auth *authenticator) loginRetryAfter(clientKey string) (time.Duration, bool) {
+	now := time.Now()
+	auth.attemptsMutex.Lock()
+	defer auth.attemptsMutex.Unlock()
+	attempt, exists := auth.attempts[clientKey]
+	if !exists || now.Sub(attempt.WindowStart) >= loginAttemptWindow {
+		if exists {
+			delete(auth.attempts, clientKey)
+		}
+		return 0, false
+	}
+	if attempt.Count < maxLoginAttempts {
+		return 0, false
+	}
+	return loginAttemptWindow - now.Sub(attempt.WindowStart), true
+}
+
+func (auth *authenticator) recordLoginFailure(clientKey string) {
+	now := time.Now()
+	auth.attemptsMutex.Lock()
+	defer auth.attemptsMutex.Unlock()
+	attempt := auth.attempts[clientKey]
+	if attempt.WindowStart.IsZero() || now.Sub(attempt.WindowStart) >= loginAttemptWindow {
+		attempt = loginAttempt{WindowStart: now}
+	}
+	attempt.Count++
+	auth.attempts[clientKey] = attempt
+}
+
+func (auth *authenticator) clearLoginFailures(clientKey string) {
+	auth.attemptsMutex.Lock()
+	delete(auth.attempts, clientKey)
+	auth.attemptsMutex.Unlock()
+}
+
+func loginClientKey(request *http.Request) string {
+	if address := strings.TrimSpace(request.Header.Get("CF-Connecting-IP")); net.ParseIP(address) != nil {
+		return address
+	}
+	host, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err == nil && host != "" {
+		return host
+	}
+	return request.RemoteAddr
+}
+
 func (auth *authenticator) sign(value string) string {
 	mac := hmac.New(sha256.New, auth.sessionKey)
 	_, _ = mac.Write([]byte(value))
@@ -178,11 +349,11 @@ func (auth *authenticator) sign(value string) string {
 
 func safeNextPath(candidate string) string {
 	if candidate == "" {
-		return "/"
+		return "/app/"
 	}
 	parsed, err := url.Parse(candidate)
 	if err != nil || parsed.IsAbs() || parsed.Host != "" || !strings.HasPrefix(parsed.Path, "/") || strings.HasPrefix(parsed.Path, "//") {
-		return "/"
+		return "/app/"
 	}
 	return parsed.RequestURI()
 }

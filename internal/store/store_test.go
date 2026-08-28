@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/melvynx/stackenv/internal/model"
+	"github.com/melvynx/code-os/internal/model"
 )
 
 func TestSnapshotRoundTrip(t *testing.T) {
 	t.Parallel()
-	store, err := Open(filepath.Join(t.TempDir(), "stackenv.db"))
+	store, err := Open(filepath.Join(t.TempDir(), "code-os.db"))
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/melvynx/stackenv/internal/model"
+	"github.com/melvynx/code-os/internal/model"
 	_ "modernc.org/sqlite"
 )
 

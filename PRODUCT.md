@@ -1,8 +1,8 @@
-# StackEnv Product Context
+# Code OS Product Context
 
 ## Product
 
-StackEnv is a self-hosted command center that turns a Mac or Linux VPS into a consistent AI-assisted development environment. It discovers projects and subprojects, surfaces Git work in progress, observes Portly-managed applications, indexes visual evidence, and will later synchronize shared agent skills through Git.
+Code OS is a self-hosted command center that turns a Mac or Linux VPS into a consistent AI-assisted development environment. It discovers projects and subprojects, surfaces Git work in progress, observes Portly-managed applications, indexes visual evidence, and will later synchronize shared agent skills through Git.
 
 ## Users
 

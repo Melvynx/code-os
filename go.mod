@@ -1,4 +1,4 @@
-module github.com/melvynx/stackenv
+module github.com/melvynx/code-os
 
 go 1.22
 

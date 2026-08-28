@@ -13,8 +13,8 @@ func TestSaveAndLoad(t *testing.T) {
 	cfg := Config{
 		Version: 1, EnvironmentName: "test-host", EnvironmentType: "remote",
 		Address: "127.0.0.1:7890", ProjectsRoots: []string{directory},
-		ScreenshotsRoot: directory, DataDir: directory, PortlyBinary: "portly",
-		Cloudflare: Cloudflare{DashboardHost: "stackenv.example.com", RequireAccess: true},
+		ScreenshotsRoot: directory, FilesRoot: directory, DataDir: directory, PortlyBinary: "portly",
+		Cloudflare: Cloudflare{RequireAccess: true},
 	}
 	if err := Save(path, cfg); err != nil {
 		t.Fatalf("Save() error = %v", err)

@@ -18,8 +18,8 @@ describe("dashboard formatters", () => {
     expect(
       getChangeCount({
         id: "project",
-        name: "StackEnv",
-        path: "/root/projects/stackenv",
+        name: "Code OS",
+        path: "/root/projects/code-os",
         worktrees: [],
         subprojects: [],
         git: {
@@ -37,7 +37,7 @@ describe("dashboard formatters", () => {
   })
 
   it("matches values without regard to case", () => {
-    expect(matchesQuery("stack", ["StackEnv", 7890])).toBe(true)
-    expect(matchesQuery("portly", ["StackEnv", 7890])).toBe(false)
+    expect(matchesQuery("code", ["Code OS", 7890])).toBe(true)
+    expect(matchesQuery("portly", ["Code OS", 7890])).toBe(false)
   })
 })

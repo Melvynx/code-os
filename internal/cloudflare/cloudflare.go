@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/melvynx/stackenv/internal/config"
+	"github.com/melvynx/code-os/internal/config"
 )
 
 type IngressRule struct {
@@ -39,7 +39,7 @@ func Configuration(cfg config.Config) (TunnelConfiguration, error) {
 	}
 	if mode == "dedicated" {
 		configuration.Fallback = &IngressRule{Service: "http_status:404"}
-		configuration.Instructions = "Use the managed ingress followed by the fallback in this dedicated StackEnv tunnel."
+		configuration.Instructions = "Use the managed ingress followed by the fallback in this dedicated Code OS tunnel."
 	}
 	return configuration, nil
 }

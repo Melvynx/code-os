@@ -3,11 +3,11 @@ package server
 import (
 	"path/filepath"
 
-	"github.com/melvynx/stackenv/internal/config"
-	"github.com/melvynx/stackenv/internal/portly"
-	"github.com/melvynx/stackenv/internal/projects"
-	"github.com/melvynx/stackenv/internal/screenshots"
-	"github.com/melvynx/stackenv/internal/store"
+	"github.com/melvynx/code-os/internal/config"
+	"github.com/melvynx/code-os/internal/portly"
+	"github.com/melvynx/code-os/internal/projects"
+	"github.com/melvynx/code-os/internal/screenshots"
+	"github.com/melvynx/code-os/internal/store"
 )
 
 func NewService(cfg config.Config, database *store.Store) *Service {
@@ -25,5 +25,5 @@ func NewService(cfg config.Config, database *store.Store) *Service {
 }
 
 func DatabasePath(cfg config.Config) string {
-	return filepath.Join(cfg.DataDir, "stackenv.db")
+	return filepath.Join(cfg.DataDir, "code-os.db")
 }

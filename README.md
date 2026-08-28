@@ -1,83 +1,89 @@
-# StackEnv
+# Code OS
 
-StackEnv turns a Mac or Linux host into an observable development environment. It discovers repositories, every linked Git worktree, and subprojects; reads work in progress per checkout; shows Portly-managed applications; and indexes screenshots in a loopback-only command center.
+Code OS turns a Mac or Linux host into one legible development environment. It discovers repositories, every Git worktree and subproject; reads Portly applications; groups screenshots by feature; synchronizes a private skills repository; and exposes the result through one secure service.
 
-The first milestone is intentionally read-only for repositories. Portly remains the process supervisor, and Cloudflare Tunnel is the supported public transport for the dashboard.
+Project Git inspection is read-only. Portly remains the process supervisor. Code OS is the only supported transport for the dashboard, private files, screenshots, and tunneled development applications.
 
 ## Quick start
 
 ```bash
-go build -o bin/stackenv ./cmd/stackenv
-./bin/stackenv setup \
+go build -o bin/code-os ./cmd/code-os
+./bin/code-os setup \
   --projects-root /root/projects \
-  --screenshots-root /var/www/code-vps \
-  --dashboard-host stackenv.melvynx.dev \
-  --dashboard-username stackenv \
-  --dashboard-password-file ~/.config/stackenv/dashboard-password \
-  --dashboard-bypass-key-file ~/.config/stackenv/media-bypass-key
-./bin/stackenv dashboard
+  --screenshots-root ~/.local/share/code-os/screenshots \
+  --files-root ~/.local/share/code-os/files \
+  --dashboard-host code-os.melvynx.dev \
+  --dashboard-username code-os \
+  --dashboard-password-file ~/.config/code-os/dashboard-password \
+  --dashboard-bypass-key-file ~/.config/code-os/media-bypass-key \
+  --dashboard-session-key-file ~/.config/code-os/session-key \
+  --public-port-host 'port{port}.melvynx.dev' \
+  --skills-repository git@github.com:YOUR_ACCOUNT/agents-config.git \
+  --skills-directory ~/.agents
+./bin/code-os dashboard
 ```
 
-Open `http://127.0.0.1:7890`. Use `stackenv doctor` to inspect dependencies and the generated Cloudflare instructions.
+Open `http://127.0.0.1:7890` for the public landing page and `/app/` for the authenticated command center. Configuration defaults to `~/.config/code-os/config.json`; runtime data defaults to `~/.local/share/code-os`.
 
 ## Commands
 
 ```text
-stackenv setup       Write the per-machine configuration
-stackenv dashboard   Run the loopback command center
-stackenv scan        Print the current environment snapshot as JSON
-stackenv status      Show a compact environment summary
-stackenv doctor      Check configuration, Git, Portly, storage, and tunnel inputs
-stackenv version     Print the build version
+code-os setup       Write the per-machine configuration
+code-os dashboard   Run the loopback command center and gateway
+code-os scan        Print the current environment snapshot as JSON
+code-os status      Show a compact environment summary
+code-os doctor      Check configuration, secrets, Git, Portly, and tunnel inputs
+code-os cloudflare  Print the managed tunnel ingress configuration
+code-os service     Install the dashboard and skills-sync user services
+code-os skills-sync Synchronize the configured private skills repository
+code-os version     Print the build version
 ```
 
-Configuration defaults to `~/.config/stackenv/config.json`. Runtime data defaults to `~/.local/share/stackenv/stackenv.db`.
-
-## Dashboard development
-
-The command center uses React, Vite, TanStack Router, TanStack Query, Tailwind CSS, and shadcn/ui backed by Radix primitives. The production build is embedded in the Go binary.
+## Build and test
 
 ```bash
-cd internal/dashboard
-pnpm install
-pnpm dev
-pnpm typecheck
-pnpm test
-pnpm build
+pnpm --dir website install --frozen-lockfile
+pnpm --dir website build
+pnpm --dir internal/dashboard install --frozen-lockfile
+pnpm --dir internal/dashboard typecheck
+pnpm --dir internal/dashboard test
+pnpm --dir internal/dashboard build
+go test ./...
+go vet ./...
+go build -o bin/code-os ./cmd/code-os
 ```
 
-The Vite server listens on `127.0.0.1:7891` and proxies `/api` and `/media` to the StackEnv daemon on `127.0.0.1:7890`. Run `pnpm build` before building the Go binary so `internal/dashboard/dist` is current.
+The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedded under `/app/`. The public TanStack Start landing and documentation are embedded at `/`. Both ship inside the Go binary.
 
 ## Security model
 
-- The daemon binds to `127.0.0.1` unless explicitly configured otherwise.
-- The dashboard hostname is distinct from public artifact hosting.
-- Screenshots stay private to the dashboard unless another tool explicitly publishes them.
-- Cloudflare credentials are referenced by path and are never copied into StackEnv configuration.
-- Cloudflare Access is required by the generated deployment checklist before public use.
-- Origin authentication uses a custom sign-in form and an `HttpOnly`, `SameSite=Strict` session cookie, so password managers work without a browser Basic Auth dialog.
-- A separate bypass key may authorize only `GET` and `HEAD` requests under `/media/`. It never grants dashboard or API access.
-- Bypassed media responses are private and non-cacheable. The complete `?bp=` URL is a bearer secret and must not enter source control or public logs.
+- The daemon binds to `127.0.0.1`; Cloudflare Tunnel is the TLS transport.
+- The landing/docs are public. `/app`, `/api`, `/media`, `/files`, and every `portNNNN` gateway require Code OS origin authentication.
+- Login uses a password-manager-compatible form, rate limiting, a stable 256-bit signing key, and `HttpOnly` secure cookies.
+- There is no anonymous artifact host. Screenshots and verification files stay private and non-cacheable.
+- A separate bypass key authorizes only `GET` and `HEAD` image reads under `/media/` and `/files/`. It never grants dashboard, settings, API, or application-gateway access.
+- Cloudflare token values are write-only, stored in a `0600` file, and never returned by the settings API.
+- Settings only accept absolute non-root paths and credential-free GitHub repository URLs.
+- The gateway proxies only running, healthy ports reported by Portly. Local agents continue to use loopback directly.
 
-To embed a private screenshot in Cursor or Codex, read `auth.bypassKeyFile` without printing it and use:
+Private image examples:
 
 ```text
 https://<dashboard-host>/media/<screenshot-id>?bp=<url-encoded-key>
+https://<dashboard-host>/files/<feature>/<evidence>.png?bp=<url-encoded-key>
 ```
 
-Rotate the key file and restart StackEnv if such a URL leaks.
+Treat the complete URL as a bearer secret. Keep it out of source control, issue trackers, analytics, shell tracing, and broad logs; rotate the bypass key if it leaks.
 
-## Current boundary
+## Skills synchronization
 
-This milestone does not yet push or pull the shared skills repository and does not mutate Cloudflare or Git state. Those operations will be added as separate, auditable fixed points after the command center foundation is verified.
+Set the GitHub repository, local checkout, and branch in `/app/settings`. Run `code-os skills-sync`, or install the two-minute timer with `code-os service install`. Only the skills repository is mutated; project repositories remain read-only. Keep credentials, tokens, machine config, and screenshots outside the skills repository.
 
 ## Architecture
 
 ```text
-Git repositories + worktrees ─┐
-Portly JSON ──────────────────┼──▶ stackenvd ──▶ loopback dashboard
-Screenshots ──────────────────┘       │
-                                     └──▶ SQLite snapshot index
+Git/worktrees ─┐
+Portly JSON ───┼──▶ Code OS (127.0.0.1:7890) ──▶ public landing/docs
+Screenshots ───┤                  ├──────────────▶ authenticated app/API/files
+Private files ─┘                  └──────────────▶ authenticated port gateway
 ```
-
-Use `stackenv cloudflare` to print the managed ingress rule. Shared-tunnel output intentionally omits a fallback so unrelated ingress rules cannot be overwritten. A dedicated tunnel configuration includes its own final `http_status:404` fallback.

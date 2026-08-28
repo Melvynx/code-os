@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/melvynx/stackenv/internal/model"
+	"github.com/melvynx/code-os/internal/model"
 )
 
 var supported = map[string]bool{

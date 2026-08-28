@@ -1,4 +1,4 @@
-# StackEnv Design System
+# Code OS Design System
 
 ## Foundations
 

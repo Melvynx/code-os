@@ -9,6 +9,7 @@ import { defineConfig } from "vite"
 const dashboardDirectory = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  base: "/app/",
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),

@@ -14,11 +14,11 @@ async function readSnapshot(response: Response): Promise<Snapshot> {
   if (response.status === 401) {
     const next = `${window.location.pathname}${window.location.search}${window.location.hash}`
     window.location.assign(`/login?next=${encodeURIComponent(next)}`)
-    throw new ApiError("StackEnv session expired", response.status)
+    throw new ApiError("Code OS session expired", response.status)
   }
 
   if (!response.ok) {
-    throw new ApiError(`StackEnv API returned ${response.status}`, response.status)
+    throw new ApiError(`Code OS API returned ${response.status}`, response.status)
   }
 
   const payload: unknown = await response.json()

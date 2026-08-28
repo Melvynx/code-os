@@ -13,18 +13,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/melvynx/stackenv/internal/config"
-	"github.com/melvynx/stackenv/internal/dashboard"
-	"github.com/melvynx/stackenv/internal/model"
+	"github.com/melvynx/code-os/internal/config"
+	"github.com/melvynx/code-os/internal/dashboard"
+	"github.com/melvynx/code-os/internal/model"
+	"github.com/melvynx/code-os/internal/site"
 )
 
 //go:embed web/*
 var webAssets embed.FS
 
 type HTTPServer struct {
-	Config  config.Config
-	Service *Service
-	Logger  *slog.Logger
+	Config     config.Config
+	ConfigPath string
+	Service    *Service
+	Logger     *slog.Logger
 }
 
 func (server HTTPServer) Handler() (http.Handler, error) {
@@ -36,14 +38,25 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	siteAssets, err := site.Assets()
+	if err != nil {
+		return nil, err
+	}
 	protected := http.NewServeMux()
 	protected.HandleFunc("GET /api/overview", server.overview)
 	protected.HandleFunc("GET /api/snapshot", server.snapshot)
 	protected.HandleFunc("POST /api/refresh", server.refresh)
 	protected.HandleFunc("GET /api/health", server.health)
+	protected.HandleFunc("GET /api/settings", server.settings)
+	protected.HandleFunc("PUT /api/settings", server.updateSettings)
 	protected.HandleFunc("GET /media/{id}", server.media)
-	protected.Handle("GET /", singlePageApplication(dashboardAssets))
-	var handler http.Handler = protected
+	protected.Handle("GET /app/", http.StripPrefix("/app", singlePageApplication(dashboardAssets)))
+	protected.HandleFunc("GET /app", func(response http.ResponseWriter, request *http.Request) {
+		http.Redirect(response, request, "/app/", http.StatusPermanentRedirect)
+	})
+	publicSite := publicSecurityHeaders(http.FileServer(http.FS(siteAssets)))
+	root := http.NewServeMux()
+	var auth *authenticator
 	if server.Config.Auth.PasswordFile != "" {
 		password, err := os.ReadFile(server.Config.Auth.PasswordFile)
 		if err != nil {
@@ -64,19 +77,49 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 				return nil, fmt.Errorf("media bypass key file is empty")
 			}
 		}
-		auth, err := newAuthenticator(loginAssets, server.Config.Auth.Username, secret, bypassKey)
+		sessionKey, err := os.ReadFile(server.Config.Auth.SessionKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("read session signing key: %w", err)
+		}
+		auth, err = newAuthenticator(loginAssets, server.Config.Auth.Username, secret, bypassKey, sessionKey)
 		if err != nil {
 			return nil, err
 		}
-		public := http.NewServeMux()
-		public.HandleFunc("GET /login", auth.loginPage)
-		public.HandleFunc("GET /login.css", auth.loginStyles)
-		public.HandleFunc("POST /auth/login", auth.login)
-		public.HandleFunc("POST /auth/logout", auth.logout)
-		public.Handle("/", auth.protect(protected))
-		handler = public
+		root.HandleFunc("GET /login", auth.loginPage)
+		root.HandleFunc("GET /login.css", auth.loginStyles)
+		root.HandleFunc("POST /auth/login", auth.login)
+		root.HandleFunc("POST /auth/logout", auth.logout)
+		if server.Config.FilesRoot != "" {
+			files := auth.protectFiles(http.HandlerFunc(server.privateFile))
+			root.Handle("GET /files/{path...}", files)
+			root.Handle("HEAD /files/{path...}", files)
+		}
+		root.Handle("/app", auth.protect(protected))
+		root.Handle("/app/", auth.protect(protected))
+		root.Handle("/api/", auth.protect(protected))
+		root.Handle("/media/", auth.protect(protected))
+	} else {
+		root.Handle("/app", protected)
+		root.Handle("/app/", protected)
+		root.Handle("/api/", protected)
+		root.Handle("/media/", protected)
 	}
-	return server.securityHeaders(server.requestLog(handler)), nil
+	root.Handle("/", publicSite)
+	dashboardHandler := server.securityHeaders(server.requestLog(root))
+	if auth != nil && server.Config.PublicPortHost != "" {
+		return server.hostRouter(dashboardHandler, auth), nil
+	}
+	return dashboardHandler, nil
+}
+
+func publicSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		response.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		response.Header().Set("X-Content-Type-Options", "nosniff")
+		response.Header().Set("X-Frame-Options", "DENY")
+		next.ServeHTTP(response, request)
+	})
 }
 
 func (server HTTPServer) overview(response http.ResponseWriter, _ *http.Request) {

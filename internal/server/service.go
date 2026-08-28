@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/melvynx/stackenv/internal/model"
-	"github.com/melvynx/stackenv/internal/portly"
-	"github.com/melvynx/stackenv/internal/projects"
-	"github.com/melvynx/stackenv/internal/screenshots"
-	"github.com/melvynx/stackenv/internal/store"
+	"github.com/melvynx/code-os/internal/model"
+	"github.com/melvynx/code-os/internal/portly"
+	"github.com/melvynx/code-os/internal/projects"
+	"github.com/melvynx/code-os/internal/screenshots"
+	"github.com/melvynx/code-os/internal/store"
 )
 
 type Service struct {
@@ -76,6 +76,17 @@ func (service *Service) MediaPath(id string) (string, bool) {
 	defer service.mutex.RUnlock()
 	path, exists := service.media[id]
 	return path, exists
+}
+
+func (service *Service) IsHealthyApplicationPort(port int) bool {
+	service.mutex.RLock()
+	defer service.mutex.RUnlock()
+	for _, application := range service.snapshot.Apps {
+		if application.Port == port && application.State == "running" && application.Healthy != nil && *application.Healthy {
+			return true
+		}
+	}
+	return false
 }
 
 func (service *Service) RunRefreshLoop(ctx context.Context, interval time.Duration) {

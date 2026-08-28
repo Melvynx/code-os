@@ -4,10 +4,10 @@ import { SyncCode, SyncGuideLayout, SyncNotice } from '../components/skills-sync
 export const Route = createFileRoute('/skills-sync_/local')({
   head: () => ({
     meta: [
-      { title: 'Computer Skills Sync Setup — StackEnv' },
+      { title: 'Computer Skills Sync Setup — Code OS' },
       { name: 'description', content: 'Connect a Mac or local development computer to the shared private agent skill library.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://stackend.codelynx.dev/skills-sync/local' }],
+    links: [{ rel: 'canonical', href: 'https://code-os.melvynx.dev/skills-sync/local' }],
   }),
   component: LocalSkillsSyncPage,
 })
@@ -25,45 +25,45 @@ git config --global user.email "YOUR_EMAIL"`}</SyncCode></>,
     title: 'Preserve the local library',
     children: <><p>Quit Codex, Cursor, and any agent currently reading skills. Move the existing local directory aside, then clone the VPS-backed repository into the canonical <code>~/.agents</code> path.</p><SyncCode>{`backup_dir="$HOME/.agents.backup.$(date +%Y%m%d-%H%M%S)"
 if [ -d ~/.agents ]; then mv ~/.agents "$backup_dir"; fi
-git clone https://github.com/YOUR_ACCOUNT/stackenv-skills.git ~/.agents
+git clone https://github.com/YOUR_ACCOUNT/code-os-skills.git ~/.agents
 echo "Previous local skills: $backup_dir"`}</SyncCode><SyncNotice>Do not delete the backup. Compare it with the cloned library and manually copy only the local skills or rules you still need.</SyncNotice></>,
   },
   {
     title: 'Install the same worker',
-    children: <><p>Both machines use the identical audited script and private Git branch. Run it once interactively before scheduling it.</p><SyncCode>{`mkdir -p ~/.local/bin
-curl -fsSL https://stackend.codelynx.dev/skills-sync.sh -o ~/.local/bin/stackenv-skills-sync
-chmod 700 ~/.local/bin/stackenv-skills-sync
-~/.local/bin/stackenv-skills-sync`}</SyncCode></>,
+    children: <><p>Configure the same repository, checkout, and branch in the local Code OS dashboard. Both machines then use the identical audited command and private Git branch. Run it once interactively before scheduling it.</p><SyncCode>{`mkdir -p ~/.local/bin
+curl -fsSL https://code-os.melvynx.dev/skills-sync.sh -o ~/.local/bin/code-os-skills-sync
+chmod 700 ~/.local/bin/code-os-skills-sync
+~/.local/bin/code-os-skills-sync`}</SyncCode></>,
   },
   {
     title: 'Schedule it with launchd',
-    children: <><p>The LaunchAgent starts after login and runs every two minutes. Logs stay in <code>~/Library/Logs/StackEnv</code>.</p><SyncCode>{`mkdir -p ~/Library/LaunchAgents ~/Library/Logs/StackEnv
-cat > ~/Library/LaunchAgents/dev.stackenv.skills-sync.plist <<'EOF'
+    children: <><p>The LaunchAgent starts after login and runs every two minutes. Logs stay in <code>~/Library/Logs/CodeOS</code>.</p><SyncCode>{`mkdir -p ~/Library/LaunchAgents ~/Library/Logs/CodeOS
+cat > ~/Library/LaunchAgents/dev.code-os.skills-sync.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>dev.stackenv.skills-sync</string>
+  <key>Label</key><string>dev.code-os.skills-sync</string>
   <key>ProgramArguments</key><array>
     <string>/bin/zsh</string><string>-lc</string>
-    <string>$HOME/.local/bin/stackenv-skills-sync</string>
+    <string>$HOME/.local/bin/code-os-skills-sync</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>120</integer>
-  <key>StandardOutPath</key><string>LOCAL_LOG_PATH/stackenv-skills-sync.log</string>
-  <key>StandardErrorPath</key><string>LOCAL_LOG_PATH/stackenv-skills-sync.error.log</string>
+  <key>StandardOutPath</key><string>LOCAL_LOG_PATH/code-os-skills-sync.log</string>
+  <key>StandardErrorPath</key><string>LOCAL_LOG_PATH/code-os-skills-sync.error.log</string>
 </dict></plist>
 EOF
-sed -i '' "s|LOCAL_LOG_PATH|$HOME/Library/Logs/StackEnv|g" ~/Library/LaunchAgents/dev.stackenv.skills-sync.plist
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/dev.stackenv.skills-sync.plist 2>/dev/null || true
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.stackenv.skills-sync.plist`}</SyncCode></>,
+sed -i '' "s|LOCAL_LOG_PATH|$HOME/Library/Logs/CodeOS|g" ~/Library/LaunchAgents/dev.code-os.skills-sync.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/dev.code-os.skills-sync.plist 2>/dev/null || true
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.code-os.skills-sync.plist`}</SyncCode></>,
   },
   {
     title: 'Verify both directions',
     children: <><p>Create a harmless test file on the computer, run a sync, then confirm it arrives on the VPS after the next timer execution.</p><SyncCode>{`touch ~/.agents/.sync-check
-~/.local/bin/stackenv-skills-sync
-launchctl kickstart -k gui/$(id -u)/dev.stackenv.skills-sync
-tail -n 30 ~/Library/Logs/StackEnv/stackenv-skills-sync.log
-git -C ~/.agents status --short --branch`}</SyncCode><p>On the VPS, run <code>systemctl --user start stackenv-skills-sync.service</code>, check that <code>.sync-check</code> exists, then remove it and sync once more.</p><SyncNotice security>Only <code>~/.agents</code> is synchronized. Project repositories, StackEnv configuration, tokens, and screenshot bypass keys stay machine-local.</SyncNotice></>,
+~/.local/bin/code-os-skills-sync
+launchctl kickstart -k gui/$(id -u)/dev.code-os.skills-sync
+tail -n 30 ~/Library/Logs/CodeOS/code-os-skills-sync.log
+git -C ~/.agents status --short --branch`}</SyncCode><p>On the VPS, run <code>systemctl --user start code-os-skills-sync.service</code>, check that <code>.sync-check</code> exists, then remove it and sync once more.</p><SyncNotice security>Only <code>~/.agents</code> is synchronized. Project repositories, Code OS configuration, tokens, and screenshot bypass keys stay machine-local.</SyncNotice></>,
   },
 ]
 

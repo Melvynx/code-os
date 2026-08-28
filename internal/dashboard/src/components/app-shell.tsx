@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router"
-import { AppWindowIcon, CameraIcon, FolderGit2Icon, GitCompareArrowsIcon, HomeIcon, MenuIcon, RefreshCwIcon, SearchIcon } from "lucide-react"
+import { AppWindowIcon, CameraIcon, FolderGit2Icon, GitCompareArrowsIcon, HomeIcon, MenuIcon, RefreshCwIcon, SearchIcon, SettingsIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { useSnapshot, useRefreshSnapshot } from "@/api/queries"
@@ -17,6 +17,7 @@ const NAVIGATION = [
   { to: "/applications", label: "Applications", icon: AppWindowIcon },
   { to: "/git", label: "Git changes", icon: GitCompareArrowsIcon },
   { to: "/screenshots", label: "Screenshots", icon: CameraIcon },
+  { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const
 
 const PAGE_TITLES: Record<string, string> = {
@@ -25,13 +26,14 @@ const PAGE_TITLES: Record<string, string> = {
   "/applications": "Applications",
   "/git": "Git changes",
   "/screenshots": "Screenshots",
+  "/settings": "Settings",
 }
 
 function Brand() {
   return (
-    <Link to="/" className="flex items-center gap-3" aria-label="StackEnv overview">
+    <Link to="/" className="flex items-center gap-3" aria-label="Code OS overview">
       <span aria-hidden="true" className="grid size-8 place-items-center border border-white bg-white font-mono text-xs font-semibold text-black">S</span>
-      <span><strong className="block text-sm font-medium text-white">StackEnv</strong><span className="block font-mono text-[10px] uppercase tracking-wider text-[#888]">Command Center</span></span>
+      <span><strong className="block text-sm font-medium text-white">Code OS</strong><span className="block font-mono text-[10px] uppercase tracking-wider text-[#888]">Command Center</span></span>
     </Link>
   )
 }
@@ -58,7 +60,7 @@ function Navigation({ mobile = false }: Readonly<{ mobile?: boolean }>) {
 
 function EnvironmentStatus() {
   const snapshot = useSnapshot()
-  const hostname = window.location.hostname === "127.0.0.1" ? "StackEnv local" : window.location.hostname
+  const hostname = window.location.hostname === "127.0.0.1" ? "Code OS local" : window.location.hostname
   const statusLabel = snapshot.isError ? "Connection error" : snapshot.data ? `Updated ${formatRelativeTime(snapshot.data.generatedAt)}` : "Connecting"
 
   return (
@@ -84,7 +86,7 @@ function MobileNavigation() {
     <Sheet>
       <SheetTrigger asChild><Button size="icon" variant="outline" aria-label="Open navigation"><MenuIcon /></Button></SheetTrigger>
       <SheetContent>
-        <SheetTitle>StackEnv navigation</SheetTitle>
+        <SheetTitle>Code OS navigation</SheetTitle>
         <SheetDescription>Navigate command center sections</SheetDescription>
         <div className="border-b border-[#333] p-5"><Brand /></div>
         <div className="flex-1 p-3"><Navigation mobile /></div>

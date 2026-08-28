@@ -5,8 +5,8 @@ import type { Project, Worktree } from "@/api/schema"
 import { GitCard } from "@/components/git-card"
 
 const worktree: Worktree = {
-  id: "stackenv-main",
-  path: "/root/projects/stackenv",
+  id: "code-os-main",
+  path: "/root/projects/code-os",
   main: true,
   locked: false,
   prunable: false,
@@ -23,9 +23,9 @@ const worktree: Worktree = {
 }
 
 const project: Project = {
-  id: "stackenv",
-  name: "stackenv",
-  path: "/root/projects/stackenv",
+  id: "code-os",
+  name: "code-os",
+  path: "/root/projects/code-os",
   git: worktree.git,
   worktrees: [worktree],
   subprojects: [],

@@ -58,7 +58,7 @@ export function SyncGuideLayout({
 # Keep the rebase and resolve each reported file
 git -C ~/.agents add PATH_TO_RESOLVED_FILE
 git -C ~/.agents rebase --continue
-~/.local/bin/stackenv-skills-sync
+~/.local/bin/code-os-skills-sync
 
 # Or return to the exact state before the pull
 git -C ~/.agents rebase --abort`}</SyncCode>
