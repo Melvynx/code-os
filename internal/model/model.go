@@ -24,11 +24,22 @@ type Subproject struct {
 	Kind string `json:"kind"`
 }
 
+type Worktree struct {
+	ID       string   `json:"id"`
+	Path     string   `json:"path"`
+	Head     string   `json:"head,omitempty"`
+	Main     bool     `json:"main"`
+	Locked   bool     `json:"locked"`
+	Prunable bool     `json:"prunable"`
+	Git      GitState `json:"git"`
+}
+
 type Project struct {
 	ID          string       `json:"id"`
 	Name        string       `json:"name"`
 	Path        string       `json:"path"`
 	Git         GitState     `json:"git"`
+	Worktrees   []Worktree   `json:"worktrees"`
 	Subprojects []Subproject `json:"subprojects"`
 }
 
@@ -71,13 +82,15 @@ type Snapshot struct {
 }
 
 type Overview struct {
-	GeneratedAt      time.Time `json:"generatedAt"`
-	ProjectCount     int       `json:"projectCount"`
-	ModifiedProjects int       `json:"modifiedProjects"`
-	RunningApps      int       `json:"runningApps"`
-	UnhealthyApps    int       `json:"unhealthyApps"`
-	ScreenshotCount  int       `json:"screenshotCount"`
-	WarningCount     int       `json:"warningCount"`
+	GeneratedAt       time.Time `json:"generatedAt"`
+	ProjectCount      int       `json:"projectCount"`
+	ModifiedProjects  int       `json:"modifiedProjects"`
+	WorktreeCount     int       `json:"worktreeCount"`
+	ModifiedWorktrees int       `json:"modifiedWorktrees"`
+	RunningApps       int       `json:"runningApps"`
+	UnhealthyApps     int       `json:"unhealthyApps"`
+	ScreenshotCount   int       `json:"screenshotCount"`
+	WarningCount      int       `json:"warningCount"`
 }
 
 func Summarize(snapshot Snapshot) Overview {
@@ -88,7 +101,19 @@ func Summarize(snapshot Snapshot) Overview {
 		WarningCount:    len(snapshot.Warnings),
 	}
 	for _, project := range snapshot.Projects {
-		if project.Git.ChangeCount() > 0 {
+		worktrees := project.Worktrees
+		if len(worktrees) == 0 {
+			worktrees = []Worktree{{Git: project.Git, Main: true}}
+		}
+		overview.WorktreeCount += len(worktrees)
+		projectModified := false
+		for _, worktree := range worktrees {
+			if worktree.Git.ChangeCount() > 0 {
+				overview.ModifiedWorktrees++
+				projectModified = true
+			}
+		}
+		if projectModified {
 			overview.ModifiedProjects++
 		}
 	}

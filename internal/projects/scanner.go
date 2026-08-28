@@ -54,10 +54,26 @@ func (scanner Scanner) Scan(ctx context.Context, roots []string) ([]model.Projec
 	sort.Strings(repositoryPaths)
 
 	projects := make([]model.Project, 0, len(repositoryPaths))
-	for _, path := range repositoryPaths {
-		project, err := scanner.inspect(ctx, path)
+	seenRepositories := make(map[string]bool)
+	for _, candidatePath := range repositoryPaths {
+		records, err := scanner.worktreeRecords(ctx, candidatePath)
 		if err != nil {
-			warnings = append(warnings, fmt.Sprintf("inspect %s: %v", path, err))
+			warnings = append(warnings, fmt.Sprintf("inspect worktrees %s: %v", candidatePath, err))
+			records = []worktreeRecord{{Path: candidatePath, Main: true}}
+		}
+		repositoryPath := candidatePath
+		if len(records) > 0 && records[0].Path != "" {
+			repositoryPath = records[0].Path
+		}
+		if seenRepositories[repositoryPath] {
+			continue
+		}
+		seenRepositories[repositoryPath] = true
+
+		project, projectWarnings, err := scanner.inspect(ctx, repositoryPath, records)
+		warnings = append(warnings, projectWarnings...)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("inspect %s: %v", repositoryPath, err))
 			continue
 		}
 		projects = append(projects, project)
@@ -110,18 +126,85 @@ func discoverRepositories(root string) ([]string, error) {
 	return repositories, nil
 }
 
-func (scanner Scanner) inspect(ctx context.Context, path string) (model.Project, error) {
+func (scanner Scanner) inspect(ctx context.Context, path string, records []worktreeRecord) (model.Project, []string, error) {
 	git, err := scanner.gitState(ctx, path)
 	if err != nil {
-		return model.Project{}, err
+		return model.Project{}, nil, err
 	}
+	worktrees, warnings := scanner.inspectWorktrees(ctx, records)
 	return model.Project{
 		ID:          stableID(path),
 		Name:        filepath.Base(path),
 		Path:        path,
 		Git:         git,
+		Worktrees:   worktrees,
 		Subprojects: discoverSubprojects(path),
-	}, nil
+	}, warnings, nil
+}
+
+type worktreeRecord struct {
+	Path     string
+	Head     string
+	Branch   string
+	Main     bool
+	Locked   bool
+	Prunable bool
+}
+
+func (scanner Scanner) worktreeRecords(ctx context.Context, path string) ([]worktreeRecord, error) {
+	command := exec.CommandContext(ctx, scanner.GitBinary, "-C", path, "worktree", "list", "--porcelain")
+	output, err := command.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git worktree list: %w", err)
+	}
+	return parseWorktreeList(string(output)), nil
+}
+
+func parseWorktreeList(output string) []worktreeRecord {
+	var records []worktreeRecord
+	var current *worktreeRecord
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		switch {
+		case strings.HasPrefix(line, "worktree "):
+			if current != nil {
+				records = append(records, *current)
+			}
+			current = &worktreeRecord{Path: strings.TrimPrefix(line, "worktree "), Main: len(records) == 0}
+		case current == nil:
+			continue
+		case strings.HasPrefix(line, "HEAD "):
+			current.Head = strings.TrimPrefix(line, "HEAD ")
+		case strings.HasPrefix(line, "branch "):
+			current.Branch = strings.TrimPrefix(strings.TrimPrefix(line, "branch "), "refs/heads/")
+		case line == "locked" || strings.HasPrefix(line, "locked "):
+			current.Locked = true
+		case line == "prunable" || strings.HasPrefix(line, "prunable "):
+			current.Prunable = true
+		}
+	}
+	if current != nil {
+		records = append(records, *current)
+	}
+	return records
+}
+
+func (scanner Scanner) inspectWorktrees(ctx context.Context, records []worktreeRecord) ([]model.Worktree, []string) {
+	worktrees := make([]model.Worktree, 0, len(records))
+	var warnings []string
+	for _, record := range records {
+		git, err := scanner.gitState(ctx, record.Path)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("inspect worktree %s: %v", record.Path, err))
+			git.Branch = record.Branch
+		}
+		worktrees = append(worktrees, model.Worktree{
+			ID: stableID(record.Path), Path: record.Path, Head: record.Head, Main: record.Main,
+			Locked: record.Locked, Prunable: record.Prunable, Git: git,
+		})
+	}
+	return worktrees, warnings
 }
 
 func (scanner Scanner) gitState(ctx context.Context, path string) (model.GitState, error) {
@@ -140,7 +223,10 @@ func parseGitStatus(output string) model.GitState {
 		line := scanner.Text()
 		switch {
 		case strings.HasPrefix(line, "# branch.head "):
-			state.Branch = strings.TrimPrefix(line, "# branch.head ")
+			branch := strings.TrimPrefix(line, "# branch.head ")
+			if branch != "(detached)" && branch != "(unknown)" {
+				state.Branch = branch
+			}
 		case strings.HasPrefix(line, "# branch.upstream "):
 			state.Upstream = strings.TrimPrefix(line, "# branch.upstream ")
 		case strings.HasPrefix(line, "# branch.ab "):

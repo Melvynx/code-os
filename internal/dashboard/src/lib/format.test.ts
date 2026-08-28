@@ -20,6 +20,7 @@ describe("dashboard formatters", () => {
         id: "project",
         name: "StackEnv",
         path: "/root/projects/stackenv",
+        worktrees: [],
         subprojects: [],
         git: {
           branch: "main",

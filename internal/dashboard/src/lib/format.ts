@@ -1,4 +1,4 @@
-import type { Project } from "@/api/schema"
+import type { GitState, Project } from "@/api/schema"
 
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"] as const
 const SECOND = 1_000
@@ -29,7 +29,11 @@ export function formatRelativeTime(value: string, currentTime = Date.now()) {
 }
 
 export function getChangeCount(project: Project) {
-  const { added, conflicts, deleted, modified, untracked } = project.git
+  return getGitChangeCount(project.git)
+}
+
+export function getGitChangeCount(git: GitState) {
+  const { added, conflicts, deleted, modified, untracked } = git
   return added + conflicts + deleted + modified + untracked
 }
 

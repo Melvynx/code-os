@@ -255,6 +255,7 @@ func status(arguments []string) error {
 	fmt.Printf("Environment   %s (%s)\n", cfg.EnvironmentName, cfg.EnvironmentType)
 	fmt.Printf("Dashboard     https://%s\n", cfg.Cloudflare.DashboardHost)
 	fmt.Printf("Projects      %d (%d modified)\n", overview.ProjectCount, overview.ModifiedProjects)
+	fmt.Printf("Worktrees     %d (%d modified)\n", overview.WorktreeCount, overview.ModifiedWorktrees)
 	fmt.Printf("Applications  %d running (%d unhealthy)\n", overview.RunningApps, overview.UnhealthyApps)
 	fmt.Printf("Screenshots   %d\n", overview.ScreenshotCount)
 	fmt.Printf("Warnings      %d\n", overview.WarningCount)

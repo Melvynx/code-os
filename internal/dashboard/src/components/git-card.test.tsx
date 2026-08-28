@@ -1,13 +1,15 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import type { Project } from "@/api/schema"
+import type { Project, Worktree } from "@/api/schema"
 import { GitCard } from "@/components/git-card"
 
-const project: Project = {
-  id: "stackenv",
-  name: "stackenv",
+const worktree: Worktree = {
+  id: "stackenv-main",
   path: "/root/projects/stackenv",
+  main: true,
+  locked: false,
+  prunable: false,
   git: {
     branch: "main",
     ahead: 1,
@@ -18,12 +20,20 @@ const project: Project = {
     untracked: 11,
     conflicts: 0,
   },
+}
+
+const project: Project = {
+  id: "stackenv",
+  name: "stackenv",
+  path: "/root/projects/stackenv",
+  git: worktree.git,
+  worktrees: [worktree],
   subprojects: [],
 }
 
 describe("GitCard", () => {
   it("uses semantic colors only for active Git change values", () => {
-    render(<GitCard project={project} />)
+    render(<GitCard project={project} worktree={worktree} />)
 
     expect(screen.getByText("Modified")).toHaveClass("text-[var(--git-modified)]")
     expect(screen.getByText("Deleted")).toHaveClass("text-[var(--git-deleted)]")
@@ -32,7 +42,7 @@ describe("GitCard", () => {
   })
 
   it("keeps labels alongside every colored value", () => {
-    render(<GitCard project={project} />)
+    render(<GitCard project={project} worktree={worktree} />)
 
     for (const label of ["Modified", "Added", "Deleted", "Untracked", "Conflicts"]) {
       expect(screen.getByText(label)).toBeVisible()

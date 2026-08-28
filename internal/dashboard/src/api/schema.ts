@@ -18,11 +18,22 @@ const subprojectSchema = z.object({
   kind: z.string(),
 })
 
+const worktreeSchema = z.object({
+  id: z.string(),
+  path: z.string(),
+  head: z.string().optional(),
+  main: z.boolean(),
+  locked: z.boolean(),
+  prunable: z.boolean(),
+  git: gitStateSchema,
+})
+
 const projectSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
   git: gitStateSchema,
+  worktrees: z.array(worktreeSchema).nullish().transform((items) => items ?? []),
   subprojects: z.array(subprojectSchema).nullish().transform((items) => items ?? []),
 })
 
@@ -65,5 +76,7 @@ export const snapshotSchema = z.object({
 
 export type Snapshot = z.infer<typeof snapshotSchema>
 export type Project = z.infer<typeof projectSchema>
+export type GitState = z.infer<typeof gitStateSchema>
+export type Worktree = z.infer<typeof worktreeSchema>
 export type Application = z.infer<typeof applicationSchema>
 export type Screenshot = z.infer<typeof screenshotSchema>

@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useDashboardSearch } from "@/contexts/search-context"
-import { getChangeCount, matchesQuery } from "@/lib/format"
+import { getGitChangeCount, matchesQuery } from "@/lib/format"
+import { getAllWorktrees, getDirtyWorktrees } from "@/lib/worktrees"
 
 export const Route = createFileRoute("/")({ component: OverviewPage })
 
@@ -23,13 +24,14 @@ function OverviewPage() {
   if (snapshotQuery.isError) return <PageError message={snapshotQuery.error.message} retry={() => void snapshotQuery.refetch()} />
 
   const { projects, applications, screenshots, warnings } = snapshotQuery.data
-  const dirtyProjects = projects.filter((project) => getChangeCount(project) > 0)
+  const worktrees = getAllWorktrees(projects)
+  const dirtyWorktrees = getDirtyWorktrees(projects)
   const visibleApps = applications.filter((application) => matchesQuery(query, [application.name, application.projectName, application.command, application.port]))
-  const visibleChanges = dirtyProjects.filter((project) => matchesQuery(query, [project.name, project.path, project.git.branch]))
+  const visibleChanges = dirtyWorktrees.filter(({ project, worktree }) => matchesQuery(query, [project.name, worktree.path, worktree.git.branch]))
   const visibleScreenshots = screenshots.filter((screenshot) => matchesQuery(query, [screenshot.name, screenshot.project, screenshot.group]))
   const metrics = [
-    { label: "Projects", value: projects.length, hint: "discovered", icon: FolderGit2Icon },
-    { label: "Modified", value: dirtyProjects.length, hint: "worktrees", icon: GitCompareArrowsIcon },
+    { label: "Projects", value: projects.length, hint: `${worktrees.length} worktrees`, icon: FolderGit2Icon },
+    { label: "Modified", value: dirtyWorktrees.length, hint: "worktrees", icon: GitCompareArrowsIcon },
     { label: "Running", value: applications.filter((application) => application.state === "running").length, hint: "Portly apps", icon: AppWindowIcon },
     { label: "Screenshots", value: screenshots.length, hint: "indexed", icon: CameraIcon },
   ]
@@ -60,12 +62,12 @@ function OverviewPage() {
         <section aria-labelledby="git-overview-title">
           <SectionHeading id="git-overview-title" eyebrow="Work in progress" title="Git changes" action={<Button asChild variant="link"><Link to="/git">View all</Link></Button>} />
           <div className="mt-5 divide-y divide-[#333] border border-[#333]">
-            {visibleChanges.length ? visibleChanges.slice(0, 5).map((project) => (
-              <div key={project.id} className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-[#111]">
-                <div className="min-w-0"><p className="truncate text-sm font-medium text-white">{project.name}</p><p className="mt-1 truncate font-mono text-xs text-[#888]">{project.git.branch || "Detached"}</p></div>
-                <Badge variant={project.git.conflicts ? "conflict" : "modified"}>{getChangeCount(project)} changes</Badge>
+            {visibleChanges.length ? visibleChanges.slice(0, 5).map(({ project, worktree }) => (
+              <div key={worktree.id} className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-[#111]">
+                <div className="min-w-0"><p className="truncate text-sm font-medium text-white">{project.name}</p><p className="mt-1 truncate font-mono text-xs text-[#888]">{worktree.git.branch || "Detached"} · {worktree.path}</p></div>
+                <Badge variant={worktree.git.conflicts ? "conflict" : "modified"}>{getGitChangeCount(worktree.git)} changes</Badge>
               </div>
-            )) : <EmptyState title="Every repository is clean" description="No Git changes match this search." />}
+            )) : <EmptyState title="Every worktree is clean" description="No Git changes match this search." />}
           </div>
         </section>
 

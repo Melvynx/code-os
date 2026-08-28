@@ -31,6 +31,8 @@ Use tables or aligned rows for processes and Git state, cards only for meaningfu
 
 Group screenshot evidence by its feature/run directory (`project` in the snapshot). Use one structural divider and count per feature, then keep the images in recency order inside that section.
 
+Treat a Git repository as a project and every checkout returned by `git worktree list --porcelain` as a worktree. Show each worktree's branch, path, lifecycle status, and independent change count; aggregate project and overview totals from those worktrees.
+
 Git colors are semantic: orange is modified, green added, red deleted, violet untracked or branch, coral conflict, and blue ahead or informational state. Zero values stay muted. Keep the text labels so color never carries meaning alone.
 
 ## Motion

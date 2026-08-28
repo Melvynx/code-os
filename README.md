@@ -1,6 +1,6 @@
 # StackEnv
 
-StackEnv turns a Mac or Linux host into an observable development environment. It discovers repositories and subprojects, reads Git work in progress, shows Portly-managed applications, and indexes screenshots in a loopback-only command center.
+StackEnv turns a Mac or Linux host into an observable development environment. It discovers repositories, every linked Git worktree, and subprojects; reads work in progress per checkout; shows Portly-managed applications; and indexes screenshots in a loopback-only command center.
 
 The first milestone is intentionally read-only for repositories. Portly remains the process supervisor, and Cloudflare Tunnel is the supported public transport for the dashboard.
 
@@ -74,10 +74,10 @@ This milestone does not yet push or pull the shared skills repository and does n
 ## Architecture
 
 ```text
-Git repositories ─┐
-Portly JSON ──────┼──▶ stackenvd ──▶ loopback dashboard
-Screenshots ──────┘       │
-                          └──▶ SQLite snapshot index
+Git repositories + worktrees ─┐
+Portly JSON ──────────────────┼──▶ stackenvd ──▶ loopback dashboard
+Screenshots ──────────────────┘       │
+                                     └──▶ SQLite snapshot index
 ```
 
 Use `stackenv cloudflare` to print the managed ingress rule. Shared-tunnel output intentionally omits a fallback so unrelated ingress rules cannot be overwritten. A dedicated tunnel configuration includes its own final `http_status:404` fallback.

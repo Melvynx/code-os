@@ -17,12 +17,12 @@ function ProjectsPage() {
   if (snapshotQuery.isError) return <PageError message={snapshotQuery.error.message} retry={() => void snapshotQuery.refetch()} />
 
   const projects = snapshotQuery.data.projects.filter((project) =>
-    matchesQuery(query, [project.name, project.path, project.git.branch, ...project.subprojects.flatMap((subproject) => [subproject.name, subproject.kind])]),
+    matchesQuery(query, [project.name, project.path, project.git.branch, ...project.worktrees.flatMap((worktree) => [worktree.path, worktree.git.branch]), ...project.subprojects.flatMap((subproject) => [subproject.name, subproject.kind])]),
   )
 
   return (
     <div className="space-y-6">
-      <SectionHeading title="Projects and subprojects" description="Repositories discovered across configured workspace roots." />
+      <SectionHeading title="Projects, worktrees, and subprojects" description="Repositories discovered across configured roots, including every linked Git worktree." />
       {projects.length ? <section aria-label="Discovered projects" className="grid gap-4 xl:grid-cols-2">{projects.map((project) => <ProjectCard key={project.id} project={project} />)}</section> : <EmptyState title="No matching projects" description="Try another search or refresh the environment." />}
     </div>
   )
