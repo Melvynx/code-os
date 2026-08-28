@@ -6,7 +6,7 @@ export function screenshotMediaUrl(screenshot: Pick<Screenshot, "id">) {
   return `/media/${encodeURIComponent(screenshot.id)}`
 }
 
-export function ScreenshotCard({ screenshot, compact = false }: Readonly<{ screenshot: Screenshot; compact?: boolean }>) {
+export function ScreenshotCard({ screenshot, compact = false, showContext = true }: Readonly<{ screenshot: Screenshot; compact?: boolean; showContext?: boolean }>) {
   const source = screenshotMediaUrl(screenshot)
   const context = screenshot.project ?? screenshot.group ?? "Screenshot"
 
@@ -20,7 +20,7 @@ export function ScreenshotCard({ screenshot, compact = false }: Readonly<{ scree
           {!compact ? (
             <span className="block border-t border-[#333] p-4">
               <strong className="block truncate text-sm font-medium text-white">{screenshot.name}</strong>
-              <span className="mt-1 block text-xs text-[#888]">{context} · {formatRelativeTime(screenshot.createdAt)}</span>
+              <span className="mt-1 block text-xs text-[#888]">{showContext ? `${context} · ` : ""}{formatRelativeTime(screenshot.createdAt)}</span>
             </span>
           ) : null}
         </button>

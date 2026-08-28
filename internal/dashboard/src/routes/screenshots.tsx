@@ -6,6 +6,7 @@ import { ScreenshotCard } from "@/components/screenshot-card"
 import { SectionHeading } from "@/components/section-heading"
 import { useDashboardSearch } from "@/contexts/search-context"
 import { matchesQuery } from "@/lib/format"
+import { groupScreenshotsByFeature } from "@/lib/screenshots"
 
 export const Route = createFileRoute("/screenshots")({ component: ScreenshotsPage })
 
@@ -19,11 +20,34 @@ function ScreenshotsPage() {
   const screenshots = snapshotQuery.data.screenshots.filter((screenshot) =>
     matchesQuery(query, [screenshot.name, screenshot.project, screenshot.group]),
   )
+  const featureGroups = groupScreenshotsByFeature(screenshots)
 
   return (
     <div className="space-y-6">
       <SectionHeading title="Screenshots" description="Private visual artifacts indexed in place and served through the authenticated dashboard." />
-      {screenshots.length ? <section aria-label="Screenshot gallery" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{screenshots.map((screenshot) => <ScreenshotCard key={screenshot.id} screenshot={screenshot} />)}</section> : <EmptyState title="No matching screenshots" description="Capture a visual artifact or try another search." />}
+      {featureGroups.length ? (
+        <div className="space-y-10">
+          {featureGroups.map((feature, index) => {
+            const headingId = `screenshot-feature-${index}`
+            return (
+              <section key={feature.name} aria-labelledby={headingId}>
+                <div className="flex items-end justify-between gap-4 border-b border-[#333] pb-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-[#888]">Feature</p>
+                    <h2 id={headingId} className="mt-1 truncate text-lg font-medium text-white">{feature.name}</h2>
+                  </div>
+                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-[#888]">
+                    {feature.screenshots.length} {feature.screenshots.length === 1 ? "screenshot" : "screenshots"}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {feature.screenshots.map((screenshot) => <ScreenshotCard key={screenshot.id} screenshot={screenshot} showContext={false} />)}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      ) : <EmptyState title="No matching screenshots" description="Capture a visual artifact or try another search." />}
     </div>
   )
 }

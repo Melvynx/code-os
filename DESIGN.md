@@ -21,11 +21,15 @@
 
 Use a compact operational density. Prefer dividers and alignment over elevation. Radii stay between 0 and 8px. Do not use gradients, blur, glow, or decorative shadows.
 
+Sidebar navigation is a flat list: links have no resting border, while hover, keyboard focus, and the current route use the `#111111` surface. Reserve borders for structural separation between major regions.
+
 ## Components
 
 Build interactive controls from shadcn/ui and Radix primitives. Preserve their keyboard behavior and accessible names while styling them through the tokens above. Buttons and fields have a 44px minimum touch target and a visible blue focus ring.
 
 Use tables or aligned rows for processes and Git state, cards only for meaningful grouping, badges only for statuses, and responsive horizontal scrolling when dense operational data cannot collapse safely.
+
+Group screenshot evidence by its feature/run directory (`project` in the snapshot). Use one structural divider and count per feature, then keep the images in recency order inside that section.
 
 Git colors are semantic: orange is modified, green added, red deleted, violet untracked or branch, coral conflict, and blue ahead or informational state. Zero values stay muted. Keep the text labels so color never carries meaning alone.
 

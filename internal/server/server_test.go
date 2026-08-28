@@ -131,6 +131,22 @@ func TestAuthenticatedClientGetsSPAForRouterPath(t *testing.T) {
 	}
 }
 
+func TestDashboardCSPAllowsRadixRuntimeStylesButKeepsScriptsStrict(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+	response := httptest.NewRecorder()
+
+	fixture.handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/login", nil))
+
+	policy := response.Header().Get("Content-Security-Policy")
+	if !strings.Contains(policy, "style-src 'self' 'unsafe-inline'") {
+		t.Fatalf("Content-Security-Policy = %q, want Radix inline styles allowed", policy)
+	}
+	if !strings.Contains(policy, "script-src 'self'") || strings.Contains(policy, "script-src 'self' 'unsafe-inline'") {
+		t.Fatalf("Content-Security-Policy = %q, want strict same-origin scripts", policy)
+	}
+}
+
 func TestAuthenticatedUnknownAPIStaysNotFound(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)

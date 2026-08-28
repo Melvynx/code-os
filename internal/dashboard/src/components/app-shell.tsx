@@ -38,14 +38,14 @@ function Brand() {
 
 function Navigation({ mobile = false }: Readonly<{ mobile?: boolean }>) {
   return (
-    <nav aria-label="Dashboard sections" className="space-y-1">
+    <nav aria-label="Dashboard sections" className="space-y-0.5">
       {NAVIGATION.map(({ to, label, icon: Icon }) => {
         const link = (
           <Link
             to={to}
             activeOptions={{ exact: to === "/" }}
-            className="flex h-10 items-center gap-3 rounded-md border border-transparent px-3 font-mono text-xs uppercase tracking-wide text-[#888] transition-colors hover:border-[#333] hover:bg-[#111] hover:text-white"
-            activeProps={{ className: "border-[#333] bg-[#111] text-white" }}
+            className="flex h-10 items-center gap-3 rounded-sm px-3 font-mono text-xs uppercase tracking-wide text-[#888] transition-colors hover:bg-[#111] hover:text-white focus-visible:bg-[#111]"
+            activeProps={{ className: "bg-[#111] text-white" }}
           >
             <Icon aria-hidden="true" className="size-4" /> {label}
           </Link>
