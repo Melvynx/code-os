@@ -47,6 +47,20 @@ export function SyncGuideLayout({
               {step.children}
             </section>
           ))}
+          <section className="sync-recovery">
+            <span className="section-label">SAFE RECOVERY</span>
+            <h2>If Git reports a conflict</h2>
+            <p>The worker stops and will not stage anything else while a rebase, merge, or unresolved file exists. Inspect the files and choose one path:</p>
+            <SyncCode>{`git -C ~/.agents status
+
+# Keep the rebase and resolve each reported file
+git -C ~/.agents add PATH_TO_RESOLVED_FILE
+git -C ~/.agents rebase --continue
+~/.local/bin/stackenv-skills-sync
+
+# Or return to the exact state before the pull
+git -C ~/.agents rebase --abort`}</SyncCode>
+          </section>
           <div className="sync-next-guide">
             <GitBranch />
             <div><span>NEXT SIDE</span><b>Configure {otherSide}</b></div>

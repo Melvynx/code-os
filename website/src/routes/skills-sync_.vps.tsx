@@ -22,14 +22,16 @@ echo "Backup: $backup_dir"`}</SyncCode><SyncNotice>Nothing is deleted or moved. 
   },
   {
     title: 'Create the private Git source',
-    children: <><p>Initialize <code>~/.agents</code> directly so the repository contains the library contents—not an extra wrapper directory. Exclude credentials before the first commit.</p><SyncCode>{`cd ~/.agents
+    children: <><p>Authenticate GitHub CLI over HTTPS first. Its credential helper remains available to the background timer without an SSH agent.</p><SyncCode>{`gh auth status || gh auth login
+gh config set git_protocol https
+gh auth setup-git`}</SyncCode><p>Then initialize <code>~/.agents</code> directly so the repository contains the library contents—not an extra wrapper directory. Exclude credentials before the first commit.</p><SyncCode>{`cd ~/.agents
 test -d .git || git init -b main
 printf '%s\n' '.env' '.env.*' '*.key' '*.pem' '*token*' '*secret*' >> .gitignore
 git config user.name "YOUR_NAME"
 git config user.email "YOUR_EMAIL"
 git add -A
 git commit -m "chore: initialize shared agent skills"
-gh repo create stackenv-skills --private --source=. --remote=origin --push`}</SyncCode><SyncNotice security>Keep the repository private. Never include Cloudflare tokens, dashboard credentials, bypass keys, SSH keys, or machine-specific environment files.</SyncNotice><p>If the private repository already exists, replace the final command with <code>git remote add origin git@github.com:YOUR_ACCOUNT/stackenv-skills.git</code> and <code>git push -u origin main</code>.</p></>,
+gh repo create stackenv-skills --private --source=. --remote=origin --push`}</SyncCode><SyncNotice security>Keep the repository private. Never include Cloudflare tokens, dashboard credentials, bypass keys, SSH keys, or machine-specific environment files.</SyncNotice><p>If the private repository already exists, replace the final command with <code>git remote add origin https://github.com/YOUR_ACCOUNT/stackenv-skills.git</code> and <code>git push -u origin main</code>.</p></>,
   },
   {
     title: 'Install the sync worker',
@@ -49,6 +51,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=%h/.local/bin/stackenv-skills-sync
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 NoNewPrivileges=true
 PrivateTmp=true
 EOF

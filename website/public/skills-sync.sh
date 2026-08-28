@@ -15,12 +15,24 @@ if ! git -C "$skills_dir" remote get-url origin >/dev/null 2>&1; then
   exit 1
 fi
 
-lock_dir="$skills_dir/.git/stackenv-sync.lock"
+git_dir=$(git -C "$skills_dir" rev-parse --absolute-git-dir)
+lock_dir="$git_dir/stackenv-sync.lock"
 if ! mkdir "$lock_dir" 2>/dev/null; then
   echo "StackEnv skills sync: another sync is already running"
   exit 0
 fi
 trap 'rmdir "$lock_dir"' EXIT INT TERM
+
+if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ] || [ -f "$git_dir/MERGE_HEAD" ] || ! git -C "$skills_dir" diff --quiet --diff-filter=U; then
+  echo "StackEnv skills sync: resolve the existing Git conflict before syncing" >&2
+  exit 1
+fi
+
+current_branch=$(git -C "$skills_dir" symbolic-ref --quiet --short HEAD || true)
+if [ "$current_branch" != "$branch" ]; then
+  echo "StackEnv skills sync: expected branch $branch, found ${current_branch:-detached HEAD}" >&2
+  exit 1
+fi
 
 git -C "$skills_dir" add -A
 if ! git -C "$skills_dir" diff --cached --quiet; then

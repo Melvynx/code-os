@@ -15,16 +15,17 @@ export const Route = createFileRoute('/skills-sync_/local')({
 const steps = [
   {
     title: 'Prepare Git authentication',
-    children: <><p>Make sure your computer can read and write the private repository without an interactive password prompt. On macOS, keep the SSH key in Keychain.</p><SyncCode>{`test ! -f ~/.ssh/id_ed25519 || ssh-add --apple-use-keychain ~/.ssh/id_ed25519
-ssh -T git@github.com || true
+    children: <><p>Use GitHub CLI over HTTPS so the LaunchAgent can authenticate through the macOS Keychain without depending on an interactive SSH agent.</p><SyncCode>{`gh auth status || gh auth login
+gh config set git_protocol https
+gh auth setup-git
 git config --global user.name "YOUR_NAME"
-git config --global user.email "YOUR_EMAIL"`}</SyncCode><p>If you use HTTPS instead, authenticate with <code>gh auth login</code>; GitHub CLI stores the credential in the macOS Keychain.</p></>,
+git config --global user.email "YOUR_EMAIL"`}</SyncCode></>,
   },
   {
     title: 'Preserve the local library',
-    children: <><p>Move the existing local directory aside, then clone the VPS-backed repository into the canonical <code>~/.agents</code> path.</p><SyncCode>{`backup_dir="$HOME/.agents.backup.$(date +%Y%m%d-%H%M%S)"
+    children: <><p>Quit Codex, Cursor, and any agent currently reading skills. Move the existing local directory aside, then clone the VPS-backed repository into the canonical <code>~/.agents</code> path.</p><SyncCode>{`backup_dir="$HOME/.agents.backup.$(date +%Y%m%d-%H%M%S)"
 if [ -d ~/.agents ]; then mv ~/.agents "$backup_dir"; fi
-git clone git@github.com:YOUR_ACCOUNT/stackenv-skills.git ~/.agents
+git clone https://github.com/YOUR_ACCOUNT/stackenv-skills.git ~/.agents
 echo "Previous local skills: $backup_dir"`}</SyncCode><SyncNotice>Do not delete the backup. Compare it with the cloned library and manually copy only the local skills or rules you still need.</SyncNotice></>,
   },
   {
