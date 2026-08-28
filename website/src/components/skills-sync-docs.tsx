@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, ArrowRight, CheckCircle2, GitBranch, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CheckCircle2, GitBranch, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { SkillsDocsShell } from './docs-shell'
 
 export function SyncCode({ children }: Readonly<{ children: string }>) {
   return <pre><code>{children}</code></pre>
@@ -26,29 +27,30 @@ export function SyncGuideLayout({
   otherSide: string
   otherUrl: '/skills-sync/vps' | '/skills-sync/local'
 }>) {
+  const active = side === 'VPS' ? 'vps' : 'local'
+
   return (
-    <main className="sync-guide-page">
-      <div className="container sync-guide-header">
-        <Link to="/skills-sync" className="back-link"><ArrowLeft /> Skills Sync</Link>
-        <span className="section-label">SETUP GUIDE · {side}</span>
+    <SkillsDocsShell active={active}>
+      <header className="documentation-header guide-header">
+        <p className="docs-breadcrumb">Documentation / Skills sync / {side}</p>
         <h1>{title}</h1>
         <p>{description}</p>
-      </div>
-      <div className="container sync-guide-layout">
-        <aside className="sync-step-nav">
-          <span>IN THIS GUIDE</span>
-          {steps.map((step, index) => <a href={`#step-${index + 1}`} key={step.title}><b>0{index + 1}</b>{step.title}</a>)}
-        </aside>
+      </header>
+      <div className="sync-guide-layout">
+        <nav className="sync-step-nav" aria-label="On this page">
+          <p>On this page</p>
+          {steps.map((step, index) => <a href={`#step-${index + 1}`} key={step.title}>{step.title}</a>)}
+          <a href="#conflicts">Conflict recovery</a>
+        </nav>
         <article className="sync-guide-content">
           {steps.map((step, index) => (
             <section id={`step-${index + 1}`} className="sync-guide-step" key={step.title}>
-              <div className="sync-step-number">0{index + 1}</div>
+              <p className="step-count">Step {index + 1} of {steps.length}</p>
               <h2>{step.title}</h2>
               {step.children}
             </section>
           ))}
-          <section className="sync-recovery">
-            <span className="section-label">SAFE RECOVERY</span>
+          <section className="sync-recovery" id="conflicts">
             <h2>If Git reports a conflict</h2>
             <p>The worker stops and will not stage anything else while a rebase, merge, or unresolved file exists. Inspect the files and choose one path:</p>
             <SyncCode>{`git -C ~/.agents status
@@ -68,6 +70,6 @@ git -C ~/.agents rebase --abort`}</SyncCode>
           </div>
         </article>
       </div>
-    </main>
+    </SkillsDocsShell>
   )
 }

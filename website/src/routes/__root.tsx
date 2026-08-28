@@ -20,7 +20,7 @@ export const Route = createRootRoute({
       { property: 'og:url', content: siteUrl },
       { property: 'og:type', content: 'website' },
       { name: 'twitter:card', content: 'summary' },
-      { name: 'theme-color', content: '#090b10' },
+      { name: 'theme-color', content: '#000000' },
     ],
     links: [
       { rel: 'stylesheet', href: stylesheet },

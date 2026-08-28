@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { ArrowRight, GitBranch, Laptop, Server, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Check, GitBranch, Laptop, Server, ShieldCheck } from 'lucide-react'
+import { SkillsDocsShell } from '../components/docs-shell'
 
 export const Route = createFileRoute('/skills-sync')({
   head: () => ({
@@ -14,51 +15,47 @@ export const Route = createFileRoute('/skills-sync')({
 
 function SkillsSyncPage() {
   return (
-    <main className="sync-hub-page">
-      <section className="sync-hero">
-        <div className="container">
-          <span className="section-label">SKILLS SYNC · TWO-SIDED SETUP</span>
-          <h1>One skill library.<br /><span>Every machine.</span></h1>
-          <p>Keep <code>~/.agents</code> synchronized between your development VPS and your computer through a private Git repository.</p>
-          <div className="sync-flow" aria-label="Skills synchronization architecture">
-            <div><Server /><span><b>VPS</b><small>~/.agents</small></span></div>
-            <i /><div className="sync-repository"><GitBranch /><span><b>Private Git</b><small>source of truth</small></span></div>
-            <i /><div><Laptop /><span><b>Your computer</b><small>~/.agents</small></span></div>
-          </div>
+    <SkillsDocsShell active="overview">
+      <header className="documentation-header">
+        <div><p className="docs-breadcrumb">Documentation / Skills sync</p><h1>Keep every agent on the same skill library.</h1></div>
+        <a className="copy-page" href="https://github.com/Melvynx/stackenv/blob/main/website/src/routes/skills-sync.tsx" target="_blank" rel="noreferrer">View source</a>
+        <p>Use a private Git repository to synchronize <code>~/.agents</code> between a development VPS and your computer. Both machines run the same small, auditable worker.</p>
+      </header>
+
+      <section className="docs-overview-section">
+        <h2>Choose where to start</h2>
+        <p>Configure the VPS first when it already contains your canonical skills. Then connect your local machine without overwriting local-only work.</p>
+        <div className="guide-card-grid">
+          <Link to="/skills-sync/vps" className="guide-card">
+            <Server aria-hidden="true" /><span><b>Set up the VPS</b><small>Publish the current ~/.agents library and start the systemd timer.</small></span><ArrowRight />
+          </Link>
+          <Link to="/skills-sync/local" className="guide-card">
+            <Laptop aria-hidden="true" /><span><b>Set up your computer</b><small>Clone the shared library and schedule synchronization on macOS.</small></span><ArrowRight />
+          </Link>
         </div>
       </section>
 
-      <section className="section sync-choose">
-        <div className="container">
-          <div className="section-heading centered">
-            <span className="section-label">CHOOSE A SIDE</span>
-            <h2>Configure both machines.</h2>
-            <p>Start with the VPS if it already contains your canonical skills, then connect your computer.</p>
-          </div>
-          <div className="sync-side-grid">
-            <article>
-              <span className="sync-side-index">01 · REMOTE</span><Server />
-              <h2>VPS setup</h2>
-              <p>Back up the current library, create the private repository, install the sync worker, and activate its systemd timer.</p>
-              <Link to="/skills-sync/vps">Configure the VPS <ArrowRight /></Link>
-            </article>
-            <article>
-              <span className="sync-side-index">02 · LOCAL</span><Laptop />
-              <h2>Computer setup</h2>
-              <p>Preserve local skills, clone the shared library, install the same worker, and schedule it with macOS launchd.</p>
-              <Link to="/skills-sync/local">Configure your computer <ArrowRight /></Link>
-            </article>
-          </div>
+      <section className="docs-overview-section">
+        <h2>How synchronization works</h2>
+        <div className="sync-diagram" aria-label="VPS to private Git repository to computer">
+          <div><Server /><span><b>VPS</b><small>~/.agents</small></span></div>
+          <span className="sync-connector">push / pull</span>
+          <div><GitBranch /><span><b>Private Git repository</b><small>main branch</small></span></div>
+          <span className="sync-connector">push / pull</span>
+          <div><Laptop /><span><b>Your computer</b><small>~/.agents</small></span></div>
         </div>
+        <ul className="docs-check-list">
+          <li><Check />Local changes are committed before pulling remote updates.</li>
+          <li><Check />Pulls use rebase so the shared history stays linear and reviewable.</li>
+          <li><Check />A directory lock prevents two workers from running at once.</li>
+          <li><Check />Conflicts stop the worker without discarding either side.</li>
+        </ul>
       </section>
 
-      <section className="section sync-boundary">
-        <div className="container">
-          <ShieldCheck />
-          <div><span className="section-label">CURRENT WORKFLOW</span><h2>Git transport today.<br />Native StackEnv sync next.</h2></div>
-          <p>The guides install a small, auditable Git worker that runs every two minutes. StackEnv does not yet expose native <code>skills sync</code> commands, so the documentation never pretends that it does.</p>
-        </div>
+      <section className="docs-callout">
+        <ShieldCheck />
+        <div><h2>Only the skill library is synchronized.</h2><p>Project repositories, StackEnv configuration, Cloudflare tokens, dashboard credentials, screenshots, and media bypass keys stay machine-local.</p></div>
       </section>
-    </main>
+    </SkillsDocsShell>
   )
 }

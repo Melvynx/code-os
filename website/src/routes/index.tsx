@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { ArrowRight, Camera, Check, Cloud, Code2, Copy, FolderGit2, GitBranch, Play, ScanSearch, ShieldCheck, Terminal } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { ArrowRight, Camera, Check, Cloud, Copy, FolderGit2, GitBranch, Play, ShieldCheck, Terminal } from 'lucide-react'
 import { useState } from 'react'
 import { StackEnvWindow } from '../components/stackenv-window'
 import { repositoryUrl } from '../components/site-chrome'
@@ -12,12 +12,9 @@ export const Route = createFileRoute('/')({
 const installCommand = 'curl -L https://github.com/Melvynx/stackenv/releases/latest/download/stackenv-linux-amd64 -o ~/.local/bin/stackenv && chmod +x ~/.local/bin/stackenv'
 
 const capabilities = [
-  { icon: FolderGit2, title: 'Projects and subprojects', copy: 'Discover repositories and nested applications from one configured root.' },
-  { icon: GitBranch, title: 'Every worktree', copy: 'Index the main checkout and every linked Git worktree, including branch and dirty state.' },
-  { icon: Play, title: 'Portly applications', copy: 'See the processes Portly supervises, their ports, health, memory, and commands.' },
-  { icon: Camera, title: 'Visual evidence', copy: 'Group screenshots by feature and serve them through protected, agent-readable URLs.' },
-  { icon: Cloud, title: 'Cloudflare transport', copy: 'Expose the command center through your own HTTPS hostname without opening the app port.' },
-  { icon: Code2, title: 'Machine-readable state', copy: 'Inspect the same environment snapshot as JSON from the CLI or authenticated API.' },
+  { icon: FolderGit2, title: 'Projects and worktrees', copy: 'Discover nested repositories, linked worktrees, branches, and dirty state from every configured root.' },
+  { icon: Play, title: 'Running applications', copy: 'Read Portly process state without launching duplicates. See commands, ports, health, and memory in context.' },
+  { icon: Camera, title: 'Visual evidence', copy: 'Group screenshots by feature and expose narrowly scoped media URLs that agents can actually render.' },
 ]
 
 function HomePage() {
@@ -43,91 +40,113 @@ function HomePage() {
   return (
     <main>
       <section className="hero">
-        <div className="hero-glow" />
-        <div className="container hero-content">
-          <div className="eyebrow"><span className="status-dot" /> v0.1.4 · Linux and macOS</div>
-          <h1>Make any machine<br /><span>agent-ready.</span></h1>
-          <p className="hero-copy">StackEnv turns a laptop or VPS into a clear, secure development environment—with every project, worktree, process, Git change, and screenshot in one place.</p>
-          <div className="hero-actions">
-            <a className="button button-primary" href="/docs">Read the docs <ArrowRight size={16} /></a>
-            <a className="button button-secondary" href={repositoryUrl} target="_blank" rel="noreferrer">View source</a>
+        <div className="container hero-grid">
+          <div className="hero-content">
+            <p className="hero-release"><span /> StackEnv 0.1.4 for Linux and macOS</p>
+            <h1>The development environment your agents can understand.</h1>
+            <p className="hero-copy">Turn a laptop or VPS into one legible workspace for projects, Git worktrees, running processes, changes, and screenshots.</p>
+            <div className="hero-actions">
+              <Link className="button button-primary" to="/docs">Get started <ArrowRight size={16} /></Link>
+              <a className="button button-secondary" href={repositoryUrl} target="_blank" rel="noreferrer">View on GitHub</a>
+            </div>
           </div>
-          <div className="install-line">
-            <Terminal size={17} />
-            <code>curl -L …/stackenv-linux-amd64 -o ~/.local/bin/stackenv</code>
-            <button type="button" onClick={copyInstall} aria-label="Copy install command">{copied ? <Check size={16} /> : <Copy size={16} />}</button>
-          </div>
-        </div>
-      </section>
-
-      <section className="facts" aria-label="StackEnv facts">
-        <div className="container facts-grid">
-          <div><strong>All worktrees</strong><span>Not only the main checkout</span></div>
-          <div><strong>127.0.0.1</strong><span>Private by default</span></div>
-          <div><strong>Portly-aware</strong><span>One process supervisor</span></div>
-          <div><strong>MIT</strong><span>Open source</span></div>
-        </div>
-      </section>
-
-      <section className="section command-section" id="command-center">
-        <div className="container">
-          <div className="section-heading centered">
-            <span className="section-label">COMMAND CENTER</span>
-            <h2>Your development environment,<br />finally observable.</h2>
-            <p>StackEnv reads the state already present on your machine and makes it useful to both humans and coding agents.</p>
-          </div>
-          <StackEnvWindow />
-          <div className="architecture-line">
-            <span><Terminal /> stackenv CLI</span><i /><span><ScanSearch /> read-only scanner</span><i /><span><LayoutGlyph /> command center</span>
+          <div className="hero-aside" aria-label="StackEnv principles">
+            <p>Built for the tools already on your machine.</p>
+            <div><span>Git</span><span>Portly</span><span>Cloudflare</span><span>Codex</span><span>Cursor</span></div>
           </div>
         </div>
+        <div className="container hero-product" id="command-center"><StackEnvWindow /></div>
       </section>
 
-      <section className="section" id="capabilities">
+      <section className="product-strip" aria-label="StackEnv facts">
+        <div className="container"><span>All Git worktrees</span><span>Loopback by default</span><span>Portly-aware</span><span>Open source · MIT</span></div>
+      </section>
+
+      <section className="section feature-intro" id="capabilities">
         <div className="container">
           <div className="section-heading split-heading">
-            <div><span className="section-label">CAPABILITIES</span><h2>Less context hunting.<br />More building.</h2></div>
-            <p>A practical layer over Git, Portly, local files, and Cloudflare—not another replacement for them.</p>
+            <h2>Stop reconstructing machine state in every conversation.</h2>
+            <p>StackEnv reads the environment you already have. It does not replace Git, your process manager, or your tunnel.</p>
           </div>
-          <div className="capability-grid">
-            {capabilities.map(({ icon: Icon, title, copy }, index) => (
-              <article className="capability-card" key={title}>
-                <span className="card-index">0{index + 1}</span><Icon />
-                <h3>{title}</h3><p>{copy}</p>
-              </article>
+          <div className="capability-list">
+            {capabilities.map(({ icon: Icon, title, copy }) => (
+              <article key={title}><Icon aria-hidden="true" /><h3>{title}</h3><p>{copy}</p></article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section" id="security">
-        <div className="container security-panel">
-          <div>
-            <span className="section-label">SECURE BY CONSTRUCTION</span>
-            <h2>Remote visibility.<br />Local trust boundary.</h2>
-            <p>The dashboard binds to loopback. Cloudflare Tunnel carries HTTPS. Authentication protects the UI and API, while a scoped media bypass lets agents render screenshots without unlocking the command center.</p>
-            <a href="/docs#security">Read the security model <ArrowRight size={15} /></a>
+      <section className="section feature-row">
+        <div className="container feature-row-grid">
+          <div className="feature-copy">
+            <p className="feature-label">Source control</p>
+            <h2>Every checkout. One exact Git picture.</h2>
+            <p>The main repository is only part of the story. StackEnv indexes linked worktrees and reports branch, ahead/behind state, and file-level change counts for each one.</p>
+            <Link to="/docs" hash="worktrees">See how discovery works <ArrowRight size={15} /></Link>
           </div>
-          <div className="security-stack">
-            <div><ShieldCheck /><span><b>Dashboard auth</b><small>Session-backed sign-in</small></span><em>REQUIRED</em></div>
-            <div><Camera /><span><b>Media bypass</b><small>GET/HEAD screenshots only</small></span><em>SCOPED</em></div>
-            <div><Cloud /><span><b>Cloudflare Tunnel</b><small>No public application port</small></span><em>TLS</em></div>
+          <div className="git-preview" aria-label="Git worktree status preview">
+            <div className="preview-title"><GitBranch /><span>Git changes</span><small>3 repositories</small></div>
+            <GitPreviewRow project="lumail.io" branch="main" changes="119" tone="orange" />
+            <GitPreviewRow project="stackenv" branch="main" changes="22" tone="blue" />
+            <GitPreviewRow project="ai-builder-club" branch="feature/editor" changes="5" tone="green" />
           </div>
         </div>
       </section>
 
-      <section className="section install-cta">
-        <div className="container">
-          <span className="section-label">START HERE</span>
-          <h2>One binary. One setup flow.<br />Your whole environment.</h2>
-          <div className="setup-steps"><code><b>01</b> stackenv setup</code><code><b>02</b> stackenv doctor</code><code><b>03</b> stackenv dashboard</code></div>
-          <a className="button button-primary" href="/docs">Install StackEnv <ArrowRight size={16} /></a>
+      <section className="section feature-row feature-row-reverse">
+        <div className="container feature-row-grid">
+          <div className="process-preview" aria-label="Running applications preview">
+            <div className="preview-title"><Play /><span>Applications</span><small>Portly state</small></div>
+            <ProcessRow name="lumail.io / dev" port="3002" memory="8.4 GB" />
+            <ProcessRow name="stackenv / website" port="3004" memory="412 MB" />
+            <ProcessRow name="ai-builder-club / web" port="3100" memory="841 MB" />
+          </div>
+          <div className="feature-copy">
+            <p className="feature-label">Runtime</p>
+            <h2>Know what is running before starting anything else.</h2>
+            <p>Portly stays responsible for process supervision. StackEnv makes its live state visible beside the repository that owns each application.</p>
+            <a href="https://portly.melvynx.dev" target="_blank" rel="noreferrer">Learn about Portly <ArrowRight size={15} /></a>
+          </div>
+        </div>
+      </section>
+
+      <section className="section security-section" id="security">
+        <div className="container security-layout">
+          <div className="feature-copy">
+            <p className="feature-label">Security boundary</p>
+            <h2>Remote visibility without a public application port.</h2>
+            <p>The dashboard binds to loopback. Cloudflare Tunnel carries HTTPS. A scoped media key can render a screenshot without granting access to the dashboard or API.</p>
+            <Link to="/docs" hash="security">Read the security model <ArrowRight size={15} /></Link>
+          </div>
+          <div className="security-list">
+            <SecurityRow icon={ShieldCheck} title="Dashboard session" detail="HTTP-only authenticated session" state="required" />
+            <SecurityRow icon={Camera} title="Media bypass" detail="GET and HEAD requests under /media" state="scoped" />
+            <SecurityRow icon={Cloud} title="Cloudflare Tunnel" detail="TLS at your own hostname" state="private" />
+          </div>
+        </div>
+      </section>
+
+      <section className="section final-cta">
+        <div className="container final-cta-grid">
+          <div><p className="feature-label">Install StackEnv</p><h2>Make the machine legible.</h2><p>Install the binary, run the guided setup, and open your command center.</p></div>
+          <div>
+            <div className="install-line"><Terminal size={17} /><code>curl -L …/stackenv-linux-amd64 -o ~/.local/bin/stackenv</code><button type="button" onClick={copyInstall} aria-label="Copy install command">{copied ? <Check size={16} /> : <Copy size={16} />}</button></div>
+            <div className="final-actions"><Link className="button button-primary" to="/docs">Open installation guide <ArrowRight size={16} /></Link><Link className="text-link" to="/skills-sync">Set up skills sync</Link></div>
+          </div>
         </div>
       </section>
     </main>
   )
 }
 
-function LayoutGlyph() {
-  return <span className="layout-glyph" aria-hidden="true"><i /><i /><i /></span>
+function GitPreviewRow({ project, branch, changes, tone }: Readonly<{ project: string; branch: string; changes: string; tone: string }>) {
+  return <div className="git-preview-row"><span className={`preview-dot ${tone}`} /><span><b>{project}</b><small>{branch}</small></span><strong>{changes} changes</strong></div>
+}
+
+function ProcessRow({ name, port, memory }: Readonly<{ name: string; port: string; memory: string }>) {
+  return <div className="process-preview-row"><span><b>{name}</b><small>pnpm dev</small></span><code>{port}</code><em>healthy</em><strong>{memory}</strong></div>
+}
+
+function SecurityRow({ icon: Icon, title, detail, state }: Readonly<{ icon: typeof ShieldCheck; title: string; detail: string; state: string }>) {
+  return <div><Icon /><span><b>{title}</b><small>{detail}</small></span><em>{state}</em></div>
 }
