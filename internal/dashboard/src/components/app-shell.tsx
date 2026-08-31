@@ -74,7 +74,7 @@ function EnvironmentStatus() {
 function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 border-r border-[#333] bg-black lg:flex lg:flex-col">
-      <div className="border-b border-[#333] p-5"><Brand /></div>
+      <div className="flex h-20 shrink-0 items-center border-b border-[#333] px-5"><Brand /></div>
       <div className="flex-1 p-3"><Navigation /></div>
       <EnvironmentStatus />
     </aside>
@@ -103,8 +103,8 @@ function Header() {
   const title = PAGE_TITLES[pathname] ?? "Command Center"
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[#333] bg-black px-4 py-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+    <header className="sticky top-0 z-20 border-b border-[#333] bg-black px-4 py-4 sm:px-6 lg:h-20 lg:px-8 lg:py-0">
+      <div className="flex flex-col gap-4 lg:h-full lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <div className="lg:hidden"><MobileNavigation /></div>
           <div><p className="font-mono text-[10px] uppercase tracking-wider text-[#888]">Development environment</p><h1 className="mt-1 text-2xl font-medium tracking-tight text-white">{title}</h1></div>
