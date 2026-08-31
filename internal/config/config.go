@@ -27,6 +27,7 @@ type Auth struct {
 	PasswordFile   string `json:"passwordFile,omitempty"`
 	BypassKeyFile  string `json:"bypassKeyFile,omitempty"`
 	SessionKeyFile string `json:"sessionKeyFile,omitempty"`
+	TrustedIPsFile string `json:"trustedIPsFile,omitempty"`
 }
 
 type Skills struct {
@@ -180,6 +181,9 @@ func (cfg Config) Validate() error {
 	}
 	if cfg.Auth.PasswordFile != "" && cfg.Auth.SessionKeyFile == "" {
 		problems = append(problems, "auth sessionKeyFile is required when authentication is configured")
+	}
+	if cfg.Auth.TrustedIPsFile != "" && cfg.Auth.PasswordFile == "" {
+		problems = append(problems, "auth trustedIPsFile requires username and passwordFile")
 	}
 	if cfg.PublicPortHost != "" && !strings.Contains(cfg.PublicPortHost, "{port}") {
 		problems = append(problems, "publicPortHost must contain {port}")

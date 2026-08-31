@@ -81,7 +81,7 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read session signing key: %w", err)
 		}
-		auth, err = newAuthenticator(loginAssets, server.Config.Auth.Username, secret, bypassKey, sessionKey)
+		auth, err = newAuthenticator(loginAssets, server.Config.Auth.Username, secret, bypassKey, server.Config.Auth.TrustedIPsFile, sessionKey)
 		if err != nil {
 			return nil, err
 		}
@@ -89,6 +89,10 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 		root.HandleFunc("GET /login.css", auth.loginStyles)
 		root.HandleFunc("POST /auth/login", auth.login)
 		root.HandleFunc("POST /auth/logout", auth.logout)
+		root.HandleFunc("GET /trust-ip", auth.trustIPPage)
+		root.HandleFunc("POST /auth/trust-ip", auth.trustIP)
+		root.Handle("GET /api/trusted-ip", auth.protect(http.HandlerFunc(auth.trustedIPStatus)))
+		root.Handle("DELETE /api/trusted-ip", auth.protect(http.HandlerFunc(auth.untrustIP)))
 		if server.Config.FilesRoot != "" {
 			files := auth.protectFiles(http.HandlerFunc(server.privateFile))
 			root.Handle("GET /files/{path...}", files)

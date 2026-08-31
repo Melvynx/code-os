@@ -1,79 +1,42 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useEffect, useState, type FormEvent, type ReactNode } from "react"
+import { useState, type FormEvent, type ReactNode } from "react"
 
+import { useRevokeTrustedIP, useSaveSettings, useSettings, useTrustedIPStatus } from "@/api/settings-queries"
+import type { Settings } from "@/api/settings"
+import { PageError, PageLoading } from "@/components/page-state"
+import { SectionHeading } from "@/components/section-heading"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SectionHeading } from "@/components/section-heading"
-
-type Settings = {
-  environmentName: string
-  projectsRoots: string[]
-  screenshotsRoot: string
-  filesRoot: string
-  dataDir: string
-  portlyBinary: string
-  publicPortHost: string
-  cloudflare: {
-    dashboardHost: string
-    tunnelMode: string
-    tunnelId: string
-    accountId: string
-    zoneId: string
-    tokenFile: string
-    requireAccess: boolean
-  }
-  auth: { username: string; passwordFile: string; bypassKeyFile: string; sessionKeyFile: string }
-  skills: { repository: string; directory: string; branch: string }
-  cloudflareTokenConfigured: boolean
-  restartRequired?: boolean
-}
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage })
 
 function SettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null)
-  const [token, setToken] = useState("")
-  const [status, setStatus] = useState("Loading configuration…")
-  const [saving, setSaving] = useState(false)
+  const settings = useSettings()
+  if (settings.isPending) return <PageLoading label="Loading Code OS settings" />
+  if (settings.isError) return <PageError message={settings.error.message} retry={() => void settings.refetch()} />
+  return <SettingsForm key={JSON.stringify(settings.data)} initialSettings={settings.data} />
+}
 
-  useEffect(() => {
-    void fetch("/api/settings", { credentials: "same-origin" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`Settings API returned ${response.status}`)
-        return response.json() as Promise<Settings>
-      })
-      .then((value) => { setSettings(value); setStatus("") })
-      .catch((error: Error) => setStatus(error.message))
-  }, [])
+function SettingsForm({ initialSettings }: Readonly<{ initialSettings: Settings }>) {
+  const [settings, setSettings] = useState(initialSettings)
+  const [token, setToken] = useState("")
+  const [status, setStatus] = useState("")
+  const save = useSaveSettings()
+  const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings({ ...settings, [key]: value })
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!settings) return
-    setSaving(true)
     setStatus("Saving…")
+    const { cloudflareTokenConfigured: _configured, restartRequired: _restart, ...editable } = settings
     try {
-	  const { cloudflareTokenConfigured: _configured, restartRequired: _restart, ...editable } = settings
-      const response = await fetch("/api/settings", {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ ...editable, cloudflareToken: token || undefined }),
-      })
-      const payload = await response.json() as Settings & { error?: string }
-      if (!response.ok) throw new Error(payload.error || `Settings API returned ${response.status}`)
-      setSettings(payload)
+      const saved = await save.mutateAsync({ ...editable, cloudflareToken: token || undefined })
+      setSettings(saved)
       setToken("")
       setStatus("Saved securely. Restart Code OS to activate the new configuration.")
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not save settings")
-    } finally {
-      setSaving(false)
     }
   }
-
-  if (!settings) return <div className="border border-[#333] p-6 font-mono text-sm text-[#888]">{status}</div>
-
-  const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings({ ...settings, [key]: value })
 
   return (
     <form className="space-y-8" onSubmit={submit}>
@@ -108,13 +71,35 @@ function SettingsPage() {
         <Field label="Password file"><Input value={settings.auth.passwordFile ?? ""} onChange={(event) => setSettings({ ...settings, auth: { ...settings.auth, passwordFile: event.target.value } })} /></Field>
         <Field label="Media bypass key file"><Input value={settings.auth.bypassKeyFile ?? ""} onChange={(event) => setSettings({ ...settings, auth: { ...settings.auth, bypassKeyFile: event.target.value } })} /></Field>
         <Field label="Session signing key file"><Input value={settings.auth.sessionKeyFile ?? ""} onChange={(event) => setSettings({ ...settings, auth: { ...settings.auth, sessionKeyFile: event.target.value } })} /></Field>
+        <Field label="Trusted IP file" wide><Input value={settings.auth.trustedIPsFile ?? ""} onChange={(event) => setSettings({ ...settings, auth: { ...settings.auth, trustedIPsFile: event.target.value } })} /></Field>
+        <Field label="Current IP trust" wide><TrustedIPControl /></Field>
       </SettingsGroup>
 
       <div className="flex items-center justify-between border-t border-[#333] pt-6">
         <p aria-live="polite" className="font-mono text-xs text-[#888]">{status}</p>
-        <Button type="submit" disabled={saving}>{saving ? "Saving" : "Save settings"}</Button>
+        <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving" : "Save settings"}</Button>
       </div>
     </form>
+  )
+}
+
+function TrustedIPControl() {
+  const status = useTrustedIPStatus()
+  const revoke = useRevokeTrustedIP()
+  if (status.isPending) return <div className="border border-[#333] p-4 font-mono text-xs text-[#888]">Reading current IP…</div>
+  if (status.isError) return <div role="alert" className="border border-[#e00] p-4 text-sm text-white">{status.error.message}</div>
+  if (!status.data.configured) return <div className="border border-[#333] p-4 text-sm text-[#888]">Configure a trusted IP file and restart Code OS to enable this feature.</div>
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-4 border border-[#333] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-mono text-sm text-white">{status.data.currentIP}</p>
+          <p className="mt-1 text-sm text-[#888]">{status.data.trusted ? "This IP skips sign-in." : "This IP still requires sign-in."} {status.data.count} trusted {status.data.count === 1 ? "address" : "addresses"}.</p>
+        </div>
+        {status.data.trusted ? <Button type="button" variant="destructive" disabled={revoke.isPending} onClick={() => revoke.mutate()}>{revoke.isPending ? "Revoking" : "Stop trusting this IP"}</Button> : null}
+      </div>
+      {revoke.isError ? <p role="alert" className="text-sm text-[#ff7b72]">{revoke.error.message}</p> : null}
+    </div>
   )
 }
 

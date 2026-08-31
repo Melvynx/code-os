@@ -115,7 +115,7 @@ func validateSettings(cfg config.Config) error {
 	}
 	paths := append([]string{}, cfg.ProjectsRoots...)
 	paths = append(paths, cfg.ScreenshotsRoot, cfg.FilesRoot, cfg.DataDir, cfg.Skills.Directory,
-		cfg.Auth.PasswordFile, cfg.Auth.BypassKeyFile, cfg.Auth.SessionKeyFile, cfg.Cloudflare.TokenFile)
+		cfg.Auth.PasswordFile, cfg.Auth.BypassKeyFile, cfg.Auth.SessionKeyFile, cfg.Auth.TrustedIPsFile, cfg.Cloudflare.TokenFile)
 	for _, path := range paths {
 		if path == "" {
 			continue
@@ -131,7 +131,7 @@ func validateSettings(cfg config.Config) error {
 	if err != nil {
 		return errors.New("user configuration directory is unavailable")
 	}
-	for _, secretPath := range []string{cfg.Cloudflare.TokenFile, cfg.Auth.PasswordFile, cfg.Auth.BypassKeyFile, cfg.Auth.SessionKeyFile} {
+	for _, secretPath := range []string{cfg.Cloudflare.TokenFile, cfg.Auth.PasswordFile, cfg.Auth.BypassKeyFile, cfg.Auth.SessionKeyFile, cfg.Auth.TrustedIPsFile} {
 		if secretPath != "" && !pathWithin(configurationRoot, secretPath) {
 			return errors.New("credential files must stay under the user configuration directory")
 		}
@@ -154,6 +154,7 @@ func cleanAuth(value config.Auth) config.Auth {
 	value.PasswordFile = cleanOptionalPath(value.PasswordFile)
 	value.BypassKeyFile = cleanOptionalPath(value.BypassKeyFile)
 	value.SessionKeyFile = cleanOptionalPath(value.SessionKeyFile)
+	value.TrustedIPsFile = cleanOptionalPath(value.TrustedIPsFile)
 	return value
 }
 

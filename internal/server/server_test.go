@@ -15,9 +15,10 @@ import (
 )
 
 type authFixture struct {
-	handler   http.Handler
-	mediaID   string
-	bypassKey string
+	handler        http.Handler
+	mediaID        string
+	bypassKey      string
+	trustedIPsPath string
 }
 
 func TestPublicLandingStaysAvailableWithoutAuthentication(t *testing.T) {
@@ -233,6 +234,111 @@ func TestLoginFormCreatesSessionForPasswordManagerFlow(t *testing.T) {
 	}
 }
 
+func TestAuthenticatedClientCanTrustAndRevokeExactIP(t *testing.T) {
+	t.Parallel()
+	fixture := newTrustedAuthFixture(t)
+	loginBody := strings.NewReader("username=code-os&password=correct-horse&next=%2Fapp%2Fprojects")
+	loginRequest := httptest.NewRequest(http.MethodPost, "https://code-os.example/auth/login", loginBody)
+	loginRequest.Host = "code-os.example"
+	loginRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginRequest.Header.Set("X-Forwarded-Proto", "https")
+	loginRequest.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	loginResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(loginResponse, loginRequest)
+	if loginResponse.Code != http.StatusSeeOther || loginResponse.Header().Get("Location") != "/trust-ip?next=%2Fapp%2Fprojects" {
+		t.Fatalf("login response = %d location %q", loginResponse.Code, loginResponse.Header().Get("Location"))
+	}
+	if len(loginResponse.Result().Cookies()) != 1 {
+		t.Fatalf("login cookies = %d, want 1", len(loginResponse.Result().Cookies()))
+	}
+	sessionCookie := loginResponse.Result().Cookies()[0]
+
+	pageRequest := httptest.NewRequest(http.MethodGet, "https://code-os.example/trust-ip?next=%2Fapp%2Fprojects", nil)
+	pageRequest.Host = "code-os.example"
+	pageRequest.Header.Set("X-Forwarded-Proto", "https")
+	pageRequest.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	pageRequest.AddCookie(sessionCookie)
+	pageResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(pageResponse, pageRequest)
+	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), "203.0.113.7") {
+		t.Fatalf("trust page = %d %q", pageResponse.Code, pageResponse.Body.String())
+	}
+
+	trustBody := strings.NewReader("next=%2Fapp%2Fprojects")
+	trustRequest := httptest.NewRequest(http.MethodPost, "https://code-os.example/auth/trust-ip", trustBody)
+	trustRequest.Host = "code-os.example"
+	trustRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	trustRequest.Header.Set("Origin", "https://code-os.example")
+	trustRequest.Header.Set("X-Forwarded-Proto", "https")
+	trustRequest.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	trustRequest.AddCookie(sessionCookie)
+	trustResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(trustResponse, trustRequest)
+	if trustResponse.Code != http.StatusSeeOther || trustResponse.Header().Get("Location") != "/app/projects" {
+		t.Fatalf("trust response = %d location %q", trustResponse.Code, trustResponse.Header().Get("Location"))
+	}
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusOK)
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.8", http.StatusUnauthorized)
+
+	stored, err := os.ReadFile(fixture.trustedIPsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(stored) != "203.0.113.7\n" {
+		t.Fatalf("trusted IP storage = %q", stored)
+	}
+	info, err := os.Stat(fixture.trustedIPsPath)
+	if err != nil {
+		t.Fatalf("stat trusted IP storage: %v", err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("trusted IP storage mode = %v, want 0600", info.Mode().Perm())
+	}
+
+	revokeRequest := httptest.NewRequest(http.MethodDelete, "https://code-os.example/api/trusted-ip", nil)
+	revokeRequest.Host = "code-os.example"
+	revokeRequest.Header.Set("Origin", "https://code-os.example")
+	revokeRequest.Header.Set("X-Forwarded-Proto", "https")
+	revokeRequest.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	revokeResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(revokeResponse, revokeRequest)
+	if revokeResponse.Code != http.StatusOK || !strings.Contains(revokeResponse.Body.String(), `"trusted":false`) {
+		t.Fatalf("revoke response = %d %q", revokeResponse.Code, revokeResponse.Body.String())
+	}
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusUnauthorized)
+}
+
+func TestTrustIPMutationRequiresSessionAndSameOrigin(t *testing.T) {
+	t.Parallel()
+	fixture := newTrustedAuthFixture(t)
+	unauthenticated := httptest.NewRequest(http.MethodPost, "https://code-os.example/auth/trust-ip", strings.NewReader("next=%2Fapp%2F"))
+	unauthenticated.Host = "code-os.example"
+	unauthenticated.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	unauthenticated.Header.Set("Origin", "https://code-os.example")
+	unauthenticated.Header.Set("X-Forwarded-Proto", "https")
+	unauthenticated.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	unauthenticatedResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(unauthenticatedResponse, unauthenticated)
+	if unauthenticatedResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated trust status = %d, want 401", unauthenticatedResponse.Code)
+	}
+
+	cookie := loginFixtureForIP(t, fixture, "203.0.113.7")
+	crossOrigin := httptest.NewRequest(http.MethodPost, "https://code-os.example/auth/trust-ip", strings.NewReader("next=%2Fapp%2F"))
+	crossOrigin.Host = "code-os.example"
+	crossOrigin.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	crossOrigin.Header.Set("Origin", "https://attacker.example")
+	crossOrigin.Header.Set("X-Forwarded-Proto", "https")
+	crossOrigin.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	crossOrigin.AddCookie(cookie)
+	crossOriginResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(crossOriginResponse, crossOrigin)
+	if crossOriginResponse.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin trust status = %d, want 403", crossOriginResponse.Code)
+	}
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusUnauthorized)
+}
+
 func loginFixture(t *testing.T, fixture authFixture) *http.Cookie {
 	t.Helper()
 	body := strings.NewReader("username=code-os&password=correct-horse&next=%2F")
@@ -272,6 +378,66 @@ func newAuthFixture(t *testing.T) authFixture {
 		t.Fatalf("Handler() error = %v", err)
 	}
 	return authFixture{handler: handler, mediaID: "image", bypassKey: "media-only-key"}
+}
+
+func newTrustedAuthFixture(t *testing.T) authFixture {
+	t.Helper()
+	directory := t.TempDir()
+	passwordFile := filepath.Join(directory, "password")
+	bypassFile := filepath.Join(directory, "bypass")
+	sessionKeyFile := filepath.Join(directory, "session-key")
+	trustedIPsFile := filepath.Join(directory, "trusted-ips")
+	imagePath := filepath.Join(directory, "image.png")
+	writeFixtureFile(t, passwordFile, "correct-horse\n")
+	writeFixtureFile(t, bypassFile, "media-only-key\n")
+	writeFixtureFile(t, sessionKeyFile, "0123456789abcdef0123456789abcdef\n")
+	writeFixtureFile(t, trustedIPsFile, "")
+	writeFixtureFile(t, imagePath, "not-a-real-png")
+	service := &Service{media: map[string]string{"image": imagePath}}
+	httpServer := HTTPServer{
+		Config: config.Config{
+			EnvironmentName: "test",
+			Auth: config.Auth{
+				Username: "code-os", PasswordFile: passwordFile, BypassKeyFile: bypassFile,
+				SessionKeyFile: sessionKeyFile, TrustedIPsFile: trustedIPsFile,
+			},
+		},
+		Service: service,
+	}
+	handler, err := httpServer.Handler()
+	if err != nil {
+		t.Fatalf("Handler() error = %v", err)
+	}
+	return authFixture{handler: handler, mediaID: "image", bypassKey: "media-only-key", trustedIPsPath: trustedIPsFile}
+}
+
+func loginFixtureForIP(t *testing.T, fixture authFixture, address string) *http.Cookie {
+	t.Helper()
+	body := strings.NewReader("username=code-os&password=correct-horse&next=%2Fapp%2F")
+	request := httptest.NewRequest(http.MethodPost, "https://code-os.example/auth/login", body)
+	request.Host = "code-os.example"
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("X-Forwarded-Proto", "https")
+	request.Header.Set("CF-Connecting-IP", address)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusSeeOther || len(response.Result().Cookies()) != 1 {
+		t.Fatalf("login failed with status %d", response.Code)
+	}
+	return response.Result().Cookies()[0]
+}
+
+func assertAPIStatusForIP(t *testing.T, handler http.Handler, address string, expected int) {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodGet, "https://code-os.example/api/health", nil)
+	request.Host = "code-os.example"
+	request.Header.Set("X-Forwarded-Proto", "https")
+	request.Header.Set("CF-Connecting-IP", address)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != expected {
+		t.Fatalf("API status for %s = %d, want %d", address, response.Code, expected)
+	}
 }
 
 func writeFixtureFile(t *testing.T, path, value string) {

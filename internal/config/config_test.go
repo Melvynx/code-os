@@ -55,3 +55,16 @@ func TestValidateRejectsBypassWithoutDashboardAuth(t *testing.T) {
 		t.Fatal("Validate() error = nil, want bypass auth dependency error")
 	}
 }
+
+func TestValidateRejectsTrustedIPsWithoutDashboardAuth(t *testing.T) {
+	t.Parallel()
+	cfg := Config{
+		Version: 1, EnvironmentName: "host", EnvironmentType: "remote",
+		Address: "127.0.0.1:7890", ProjectsRoots: []string{"/tmp/projects"},
+		FilesRoot: "/tmp/files", DataDir: "/tmp/data", PortlyBinary: "portly",
+		Auth: Auth{TrustedIPsFile: "/tmp/trusted-ips"},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate() error = nil, want trusted IP auth dependency error")
+	}
+}

@@ -39,6 +39,8 @@ func (server HTTPServer) gatewayRoutes(auth *authenticator, protected http.Handl
 	mux.HandleFunc("GET /_code-os/login.css", auth.loginStyles)
 	mux.HandleFunc("POST /_code-os/auth/login", auth.gatewayLogin)
 	mux.HandleFunc("POST /_code-os/auth/logout", auth.gatewayLogout)
+	mux.HandleFunc("GET /_code-os/trust-ip", auth.gatewayTrustIPPage)
+	mux.HandleFunc("POST /_code-os/auth/trust-ip", auth.gatewayTrustIP)
 	mux.Handle("/", auth.protectGateway(protected))
 	return gatewayAuthSecurityHeaders(mux)
 }

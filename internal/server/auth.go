@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -33,8 +32,9 @@ type authenticator struct {
 	password        string
 	bypassKey       string
 	sessionKey      []byte
-	loginTemplate   *template.Template
+	templates       *template.Template
 	loginStylesheet []byte
+	trustedIPs      *trustedIPStore
 	attemptsMutex   sync.Mutex
 	attempts        map[string]loginAttempt
 }
@@ -61,6 +61,8 @@ type authSurface struct {
 	StylesheetPath string
 	LoginAction    string
 	LogoutPath     string
+	TrustPath      string
+	TrustAction    string
 	PageTitle      string
 	Heading        string
 	Description    string
@@ -71,20 +73,20 @@ type authSurface struct {
 
 var dashboardAuthSurface = authSurface{
 	CookieName: sessionCookieName, LoginPath: "/login", StylesheetPath: "/login.css?v=black-grid-2",
-	LoginAction: "/auth/login", LogoutPath: "/auth/logout", PageTitle: "Sign in — Code OS",
+	LoginAction: "/auth/login", LogoutPath: "/auth/logout", TrustPath: "/trust-ip", TrustAction: "/auth/trust-ip", PageTitle: "Sign in — Code OS",
 	Heading: "Sign in to Code OS", Description: "Use the credentials configured on this environment.",
 	Context: "Private development environment", SameSite: http.SameSiteStrictMode, APIsUseJSON401: true,
 }
 
 var gatewayAuthSurface = authSurface{
 	CookieName: gatewaySessionCookieName, LoginPath: "/_code-os/login", StylesheetPath: "/_code-os/login.css?v=black-grid-2",
-	LoginAction: "/_code-os/auth/login", LogoutPath: "/_code-os/auth/logout", PageTitle: "Unlock application — Code OS",
+	LoginAction: "/_code-os/auth/login", LogoutPath: "/_code-os/auth/logout", TrustPath: "/_code-os/trust-ip", TrustAction: "/_code-os/auth/trust-ip", PageTitle: "Unlock application — Code OS",
 	Heading: "Unlock development app", Description: "Authenticate before opening this private development port.",
 	Context: "Protected by Code OS", SameSite: http.SameSiteLaxMode,
 }
 
-func newAuthenticator(assets fs.FS, username, password, bypassKey string, sessionKey []byte) (*authenticator, error) {
-	loginTemplate, err := template.ParseFS(assets, "login.html")
+func newAuthenticator(assets fs.FS, username, password, bypassKey, trustedIPsFile string, sessionKey []byte) (*authenticator, error) {
+	templates, err := template.ParseFS(assets, "login.html", "trust-ip.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse login page: %w", err)
 	}
@@ -95,9 +97,13 @@ func newAuthenticator(assets fs.FS, username, password, bypassKey string, sessio
 	if len(sessionKey) < 32 {
 		return nil, fmt.Errorf("session signing key must contain at least 32 bytes")
 	}
+	trustedIPs, err := newTrustedIPStore(trustedIPsFile)
+	if err != nil {
+		return nil, fmt.Errorf("load trusted IPs: %w", err)
+	}
 	return &authenticator{
 		username: username, password: password, bypassKey: bypassKey,
-		sessionKey: append([]byte(nil), sessionKey...), loginTemplate: loginTemplate, loginStylesheet: loginStylesheet,
+		sessionKey: append([]byte(nil), sessionKey...), templates: templates, loginStylesheet: loginStylesheet, trustedIPs: trustedIPs,
 		attempts: make(map[string]loginAttempt),
 	}, nil
 }
@@ -112,7 +118,7 @@ func (auth *authenticator) protectGateway(next http.Handler) http.Handler {
 
 func (auth *authenticator) protectFiles(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if auth.hasValidSession(request) {
+		if auth.hasTrustedIPAddress(request) || auth.hasValidSession(request) {
 			next.ServeHTTP(response, request)
 			return
 		}
@@ -139,7 +145,7 @@ func (auth *authenticator) protectFiles(next http.Handler) http.Handler {
 
 func (auth *authenticator) protectSurface(next http.Handler, surface authSurface) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if auth.hasValidSessionFor(request, surface.CookieName) {
+		if auth.hasTrustedIPAddress(request) || auth.hasValidSessionFor(request, surface.CookieName) {
 			next.ServeHTTP(response, request)
 			return
 		}
@@ -172,7 +178,7 @@ func (auth *authenticator) loginPageFor(response http.ResponseWriter, request *h
 	nextPath := safeNextPath(request.URL.Query().Get("next"))
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "no-store")
-	if err := auth.loginTemplate.ExecuteTemplate(response, "login.html", auth.loginPageData(surface, nextPath, false)); err != nil {
+	if err := auth.templates.ExecuteTemplate(response, "login.html", auth.loginPageData(surface, nextPath, false)); err != nil {
 		http.Error(response, "Unable to render sign in", http.StatusInternalServerError)
 	}
 }
@@ -211,11 +217,15 @@ func (auth *authenticator) loginFor(response http.ResponseWriter, request *http.
 		response.Header().Set("Content-Type", "text/html; charset=utf-8")
 		response.Header().Set("Cache-Control", "no-store")
 		response.WriteHeader(http.StatusUnauthorized)
-		_ = auth.loginTemplate.ExecuteTemplate(response, "login.html", auth.loginPageData(surface, nextPath, true))
+		_ = auth.templates.ExecuteTemplate(response, "login.html", auth.loginPageData(surface, nextPath, true))
 		return
 	}
 	auth.clearLoginFailures(clientKey)
 	auth.setSessionCookieFor(response, request, surface)
+	if auth.trustedIPs != nil && !auth.hasTrustedIPAddress(request) {
+		http.Redirect(response, request, surface.TrustPath+"?next="+url.QueryEscape(nextPath), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(response, request, nextPath, http.StatusSeeOther)
 }
 
@@ -331,14 +341,15 @@ func (auth *authenticator) clearLoginFailures(clientKey string) {
 }
 
 func loginClientKey(request *http.Request) string {
-	if address := strings.TrimSpace(request.Header.Get("CF-Connecting-IP")); net.ParseIP(address) != nil {
-		return address
-	}
-	host, _, err := net.SplitHostPort(request.RemoteAddr)
-	if err == nil && host != "" {
-		return host
+	if address, err := clientIPAddress(request); err == nil {
+		return address.String()
 	}
 	return request.RemoteAddr
+}
+
+func (auth *authenticator) hasTrustedIPAddress(request *http.Request) bool {
+	address, err := clientIPAddress(request)
+	return err == nil && auth.trustedIPs.Contains(address)
 }
 
 func (auth *authenticator) sign(value string) string {

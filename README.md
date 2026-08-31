@@ -17,6 +17,7 @@ go build -o bin/code-os ./cmd/code-os
   --dashboard-password-file ~/.config/code-os/dashboard-password \
   --dashboard-bypass-key-file ~/.config/code-os/media-bypass-key \
   --dashboard-session-key-file ~/.config/code-os/session-key \
+  --dashboard-trusted-ips-file ~/.config/code-os/trusted-ips \
   --public-port-host 'port{port}.mlvcdn.com' \
   --skills-repository git@github.com:YOUR_ACCOUNT/agents-config.git \
   --skills-directory ~/.agents
@@ -60,6 +61,7 @@ The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedd
 - The daemon binds to `127.0.0.1`; Cloudflare Tunnel is the TLS transport.
 - The landing/docs are public. `/app`, `/api`, `/media`, `/files`, and every `portNNNN` gateway require Code OS origin authentication.
 - Login uses a password-manager-compatible form, rate limiting, a stable 256-bit signing key, and `HttpOnly` secure cookies.
+- After a valid password sign-in, the user can trust the detected exact public IP. Trusted IPs are stored locally in a mode-`0600` file, apply to the dashboard and protected ports, and can be revoked from Settings.
 - There is no anonymous artifact host. Screenshots and verification files stay private and non-cacheable.
 - A separate bypass key authorizes only `GET` and `HEAD` image reads under `/media/` and `/files/`. It never grants dashboard, settings, API, or application-gateway access.
 - Cloudflare token values are write-only, stored in a `0600` file, and never returned by the settings API.

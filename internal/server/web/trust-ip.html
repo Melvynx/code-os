@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Trust this IP — Code OS</title>
+    <link rel="stylesheet" href="{{.StylesheetPath}}" />
+  </head>
+  <body>
+    <main class="shell" aria-labelledby="trust-title">
+      <header class="masthead">
+        <p class="wordmark">CODE OS</p>
+        <p>Projects, processes, Git state, and visual evidence</p>
+      </header>
+
+      <div class="context" aria-hidden="true">{{.Context}} <span>→</span></div>
+
+      <section class="login-section">
+        <p class="section-label">TRUSTED NETWORK</p>
+        <div class="intro">
+          <h1 id="trust-title">Skip sign-in from this IP?</h1>
+          <p>Code OS detected your public IP as:</p>
+          <p class="ip-value">{{.ClientIP}}</p>
+        </div>
+
+        <p class="trust-note">Trust only a private or stable connection you control. Anyone sharing this public IP will be able to open Code OS and its protected development ports.</p>
+
+        <form method="post" action="{{.FormAction}}">
+          <input type="hidden" name="next" value="{{.Next}}" />
+          <button type="submit"><span>Trust this IP</span><span aria-hidden="true">→</span></button>
+        </form>
+
+        <a class="secondary-action" href="{{.Next}}">Not now</a>
+
+        <footer>EXACT IP / REVOCABLE / STORED LOCALLY</footer>
+      </section>
+    </main>
+  </body>
+</html>

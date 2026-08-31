@@ -80,6 +80,21 @@ h1 {
   line-height: 1.6;
 }
 
+.ip-value {
+  margin: 18px 0 0 !important;
+  color: #50e3c2 !important;
+  font-size: 20px !important;
+  overflow-wrap: anywhere;
+}
+
+.trust-note {
+  max-width: 68ch;
+  margin: 0 0 24px;
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .error {
   margin-bottom: 24px;
   padding: 16px 18px;
@@ -146,6 +161,27 @@ button:hover {
 button:focus-visible {
   outline: 1px solid #fff;
   outline-offset: 2px;
+}
+
+.secondary-action {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  border: 1px solid transparent;
+  color: #888;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.secondary-action:hover {
+  color: #fff;
+}
+
+.secondary-action:focus-visible {
+  border-color: #fff;
+  outline: none;
 }
 
 footer {

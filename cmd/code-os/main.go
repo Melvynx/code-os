@@ -119,6 +119,7 @@ func setup(arguments []string) error {
 	authPasswordFile := flags.String("dashboard-password-file", "", "path to dashboard password")
 	authBypassKeyFile := flags.String("dashboard-bypass-key-file", "", "path to the media-only bypass key")
 	authSessionKeyFile := flags.String("dashboard-session-key-file", "", "path to the session signing key")
+	authTrustedIPsFile := flags.String("dashboard-trusted-ips-file", "", "path to exact client IPs allowed to skip sign-in")
 	nonInteractive := flags.Bool("non-interactive", false, "do not prompt for missing values")
 	if err := flags.Parse(arguments); err != nil {
 		return err
@@ -151,9 +152,13 @@ func setup(arguments []string) error {
 	cfg.Auth = config.Auth{
 		Username: strings.TrimSpace(*authUsername), PasswordFile: expandOptionalPath(*authPasswordFile),
 		BypassKeyFile: expandOptionalPath(*authBypassKeyFile), SessionKeyFile: expandOptionalPath(*authSessionKeyFile),
+		TrustedIPsFile: expandOptionalPath(*authTrustedIPsFile),
 	}
 	if cfg.Auth.PasswordFile != "" && cfg.Auth.SessionKeyFile == "" {
 		cfg.Auth.SessionKeyFile = filepath.Join(filepath.Dir(cfg.Auth.PasswordFile), "session-key")
+	}
+	if cfg.Auth.PasswordFile != "" && cfg.Auth.TrustedIPsFile == "" {
+		cfg.Auth.TrustedIPsFile = filepath.Join(filepath.Dir(cfg.Auth.PasswordFile), "trusted-ips")
 	}
 	cfg.Skills = config.Skills{
 		Repository: strings.TrimSpace(*skillsRepository), Directory: expandOptionalPath(*skillsDirectory), Branch: strings.TrimSpace(*skillsBranch),
@@ -173,6 +178,11 @@ func setup(arguments []string) error {
 			return err
 		}
 	}
+	if cfg.Auth.TrustedIPsFile != "" {
+		if err := ensureEmptyPrivateFile(cfg.Auth.TrustedIPsFile); err != nil {
+			return err
+		}
+	}
 	if err := config.Save(*configPath, cfg); err != nil {
 		return err
 	}
@@ -184,6 +194,7 @@ func setup(arguments []string) error {
 		if cfg.Auth.BypassKeyFile != "" {
 			fmt.Printf("Media bypass key: %s\n", cfg.Auth.BypassKeyFile)
 		}
+		fmt.Printf("Trusted IP file: %s\n", cfg.Auth.TrustedIPsFile)
 	} else {
 		fmt.Printf("Public hostname: https://%s (Cloudflare Access required)\n", cfg.Cloudflare.DashboardHost)
 	}
@@ -310,6 +321,9 @@ func doctor(arguments []string) error {
 	}
 	if cfg.Auth.SessionKeyFile != "" {
 		checks = append(checks, check{"Session signing key", cfg.Auth.SessionKeyFile, isPrivateRegularFile(cfg.Auth.SessionKeyFile), true})
+	}
+	if cfg.Auth.TrustedIPsFile != "" {
+		checks = append(checks, check{"Trusted IP storage", cfg.Auth.TrustedIPsFile, isPrivateRegularFile(cfg.Auth.TrustedIPsFile), true})
 	}
 	for _, root := range cfg.ProjectsRoots {
 		checks = append(checks, check{"Projects root", root, isDirectory(root), true})
@@ -597,6 +611,30 @@ func ensurePasswordFile(path string) error {
 		return fmt.Errorf("close dashboard password file: %w", err)
 	}
 	return nil
+}
+
+func ensureEmptyPrivateFile(path string) error {
+	info, err := os.Lstat(path)
+	if err == nil {
+		if !info.Mode().IsRegular() {
+			return errors.New("private file must be a regular file")
+		}
+		if err := os.Chmod(path, 0o600); err != nil {
+			return fmt.Errorf("secure private file: %w", err)
+		}
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect private file: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("create private file directory: %w", err)
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("create private file: %w", err)
+	}
+	return file.Close()
 }
 
 func isLoopbackAddress(address string) bool {

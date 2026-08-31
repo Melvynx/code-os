@@ -118,7 +118,8 @@ http://127.0.0.1:7890`}</CodeBlock>
               <li>Credentials are read from permission-restricted files, not committed config.</li>
               <li>Successful sign-in creates an HTTP-only session cookie.</li>
               <li>A stable 256-bit signing key keeps sessions valid across safe restarts.</li>
-              <li>The JSON API always requires a valid session.</li>
+              <li>An optional exact-IP trust list can skip future sign-ins from a connection the user explicitly approves.</li>
+              <li>The JSON API requires a valid session or an IP that you explicitly trusted after signing in.</li>
               <li>The media bypass is separately generated and scoped to image reads.</li>
               <li>Cloudflare provides the public TLS boundary.</li>
             </ul>
@@ -140,7 +141,8 @@ http://127.0.0.1:7890`}</CodeBlock>
     "username": "code-os",
     "passwordFile": "/root/.config/code-os/dashboard-password",
     "bypassKeyFile": "/root/.config/code-os/media-bypass-key",
-    "sessionKeyFile": "/root/.config/code-os/session-key"
+    "sessionKeyFile": "/root/.config/code-os/session-key",
+    "trustedIPsFile": "/root/.config/code-os/trusted-ips"
   },
   "skills": {
     "repository": "git@github.com:YOUR_ACCOUNT/agents-config.git",

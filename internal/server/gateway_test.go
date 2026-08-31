@@ -89,6 +89,72 @@ func TestGatewayRejectsPortMissingFromHealthySnapshot(t *testing.T) {
 	}
 }
 
+func TestTrustedIPSkipsGatewaySessionAcrossProtectedPort(t *testing.T) {
+	t.Parallel()
+	origin, port := loopbackOrigin(t, func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusOK)
+		_, _ = response.Write([]byte("trusted-proxy"))
+	})
+	defer origin.Close()
+	fixture := newTrustedGatewayFixture(t, port, "203.0.113.7")
+	host := fmt.Sprintf("port%d.example.com", port)
+
+	trustedRequest := httptest.NewRequest(http.MethodGet, "https://"+host+"/private", nil)
+	trustedRequest.Host = host
+	trustedRequest.Header.Set("X-Forwarded-Proto", "https")
+	trustedRequest.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	trustedResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(trustedResponse, trustedRequest)
+	if trustedResponse.Code != http.StatusOK || trustedResponse.Body.String() != "trusted-proxy" {
+		t.Fatalf("trusted gateway response = %d %q", trustedResponse.Code, trustedResponse.Body.String())
+	}
+
+	untrustedRequest := httptest.NewRequest(http.MethodGet, "https://"+host+"/private", nil)
+	untrustedRequest.Host = host
+	untrustedRequest.Header.Set("X-Forwarded-Proto", "https")
+	untrustedRequest.Header.Set("CF-Connecting-IP", "203.0.113.8")
+	untrustedResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(untrustedResponse, untrustedRequest)
+	if untrustedResponse.Code != http.StatusSeeOther || !strings.HasPrefix(untrustedResponse.Header().Get("Location"), "/_code-os/login?") {
+		t.Fatalf("untrusted gateway response = %d location %q", untrustedResponse.Code, untrustedResponse.Header().Get("Location"))
+	}
+}
+
+func TestGatewayLoginOffersCurrentIPTrust(t *testing.T) {
+	t.Parallel()
+	origin, port := loopbackOrigin(t, func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusOK)
+	})
+	defer origin.Close()
+	fixture := newTrustedGatewayFixture(t, port, "")
+	host := fmt.Sprintf("port%d.example.com", port)
+	body := strings.NewReader("username=code-os&password=correct-horse&next=%2F")
+	request := httptest.NewRequest(http.MethodPost, "https://"+host+"/_code-os/auth/login", body)
+	request.Host = host
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("X-Forwarded-Proto", "https")
+	request.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/_code-os/trust-ip?next=%2F" {
+		t.Fatalf("gateway login response = %d location %q", response.Code, response.Header().Get("Location"))
+	}
+	if len(response.Result().Cookies()) != 1 {
+		t.Fatalf("gateway cookies = %d, want 1", len(response.Result().Cookies()))
+	}
+
+	pageRequest := httptest.NewRequest(http.MethodGet, "https://"+host+"/_code-os/trust-ip?next=%2F", nil)
+	pageRequest.Host = host
+	pageRequest.Header.Set("X-Forwarded-Proto", "https")
+	pageRequest.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	pageRequest.AddCookie(response.Result().Cookies()[0])
+	pageResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(pageResponse, pageRequest)
+	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), "203.0.113.7") {
+		t.Fatalf("gateway trust page = %d %q", pageResponse.Code, pageResponse.Body.String())
+	}
+}
+
 func TestPrivateFileBypassIsImageOnly(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()
@@ -168,6 +234,33 @@ func newGatewayFixture(t *testing.T, healthyPort int) gatewayFixture {
 	server := HTTPServer{Config: config.Config{
 		EnvironmentName: "test", PublicPortHost: "port{port}.example.com",
 		Auth: config.Auth{Username: "code-os", PasswordFile: passwordFile, BypassKeyFile: bypassFile, SessionKeyFile: sessionKeyFile},
+	}, Service: service}
+	handler, err := server.Handler()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return gatewayFixture{handler: handler}
+}
+
+func newTrustedGatewayFixture(t *testing.T, healthyPort int, trustedAddress string) gatewayFixture {
+	t.Helper()
+	directory := t.TempDir()
+	passwordFile := filepath.Join(directory, "password")
+	bypassFile := filepath.Join(directory, "bypass")
+	sessionKeyFile := filepath.Join(directory, "session-key")
+	trustedIPsFile := filepath.Join(directory, "trusted-ips")
+	writeFixtureFile(t, passwordFile, "correct-horse\n")
+	writeFixtureFile(t, bypassFile, "media-only-key\n")
+	writeFixtureFile(t, sessionKeyFile, "0123456789abcdef0123456789abcdef\n")
+	writeFixtureFile(t, trustedIPsFile, trustedAddress+"\n")
+	healthy := true
+	service := &Service{media: map[string]string{}, snapshot: model.Snapshot{Apps: []model.Application{{Port: healthyPort, State: "running", Healthy: &healthy}}}}
+	server := HTTPServer{Config: config.Config{
+		EnvironmentName: "test", PublicPortHost: "port{port}.example.com",
+		Auth: config.Auth{
+			Username: "code-os", PasswordFile: passwordFile, BypassKeyFile: bypassFile,
+			SessionKeyFile: sessionKeyFile, TrustedIPsFile: trustedIPsFile,
+		},
 	}, Service: service}
 	handler, err := server.Handler()
 	if err != nil {

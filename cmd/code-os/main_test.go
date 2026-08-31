@@ -40,3 +40,32 @@ func TestEnsurePasswordFileCreatesPrivateSecret(t *testing.T) {
 		t.Fatal("generated secret file mode is not 0600")
 	}
 }
+
+func TestEnsureEmptyPrivateFileCreatesSecureStorage(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "nested", "trusted-ips")
+
+	if err := ensureEmptyPrivateFile(path); err != nil {
+		t.Fatalf("ensureEmptyPrivateFile() error = %v", err)
+	}
+	if !isPrivateRegularFile(path) {
+		t.Fatal("trusted IP storage mode is not 0600")
+	}
+}
+
+func TestEnsureEmptyPrivateFileRejectsSymlink(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	target := filepath.Join(directory, "target")
+	path := filepath.Join(directory, "trusted-ips")
+	if err := os.WriteFile(target, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ensureEmptyPrivateFile(path); err == nil {
+		t.Fatal("ensureEmptyPrivateFile() accepted a symlink")
+	}
+}
