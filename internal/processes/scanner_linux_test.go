@@ -57,3 +57,43 @@ func TestIsAncestorOnlyMatchesProcessLineage(t *testing.T) {
 		t.Fatal("unrelated PID was treated as an ancestor")
 	}
 }
+
+func TestAgentSignaturesDetectWrappedCLIsWithoutMatchingShellCommands(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		item      process
+		agentName string
+	}{
+		{
+			name:      "Cursor worker with generic process name",
+			item:      process{command: "MainThread", arguments: "/root/.cursor-server/agent-cli/.local/bin/cursor-agent worker start"},
+			agentName: "Cursor agent",
+		},
+		{
+			name:      "Claude distributed as a Node CLI",
+			item:      process{command: "node", arguments: "node /opt/node_modules/@anthropic-ai/claude-code/cli.js"},
+			agentName: "Claude agent",
+		},
+		{
+			name:      "Gemini distributed as a Node CLI",
+			item:      process{command: "node", arguments: "node /opt/node_modules/@google/gemini-cli/dist/index.js"},
+			agentName: "Gemini agent",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if !isAgent(test.item) {
+				t.Fatal("expected wrapped CLI to be detected as an agent")
+			}
+			if got := agentName(test.item); got != test.agentName {
+				t.Fatalf("agentName() = %q, want %q", got, test.agentName)
+			}
+		})
+	}
+
+	shell := process{command: "bash", arguments: "bash -lc rg cursor-agent /tmp/log"}
+	if isAgent(shell) {
+		t.Fatal("shell command mentioning an agent was treated as an agent process")
+	}
+}

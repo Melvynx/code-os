@@ -213,27 +213,52 @@ func isAgent(item process) bool {
 			return true
 		}
 	}
-	return strings.Contains(arguments, "/.codex/") && strings.Contains(arguments, "app-server")
+	if isCommandWrapper(command) {
+		return false
+	}
+	signatures := []string{
+		"/.codex/", "@openai/codex",
+		"/cursor-agent", "anysphere.cursor-agent-worker",
+		"@anthropic-ai/claude-code", "/claude-code/",
+		"/opencode/", "/opencode-",
+		"/aider/", "aider.main",
+		"@google/gemini-cli", "/gemini-cli/",
+	}
+	for _, signature := range signatures {
+		if strings.Contains(arguments, signature) {
+			return true
+		}
+	}
+	return false
+}
+
+func isCommandWrapper(command string) bool {
+	switch command {
+	case "bash", "sh", "zsh", "fish", "rg", "grep", "sed", "awk", "ps":
+		return true
+	default:
+		return false
+	}
 }
 
 func agentName(item process) string {
 	command := strings.ToLower(item.command)
 	arguments := strings.ToLower(item.arguments)
 	switch {
-	case strings.Contains(command, "codex") || strings.Contains(arguments, "/.codex/"):
+	case strings.Contains(command, "codex") || strings.Contains(arguments, "/.codex/") || strings.Contains(arguments, "@openai/codex"):
 		if strings.Contains(arguments, "proxy") {
 			return "Codex proxy"
 		}
 		return "Codex agent"
-	case strings.Contains(command, "claude"):
+	case strings.Contains(command, "claude") || strings.Contains(arguments, "claude-code"):
 		return "Claude agent"
-	case strings.Contains(command, "cursor"):
+	case strings.Contains(command, "cursor") || strings.Contains(arguments, "cursor-agent"):
 		return "Cursor agent"
-	case strings.Contains(command, "opencode"):
+	case strings.Contains(command, "opencode") || strings.Contains(arguments, "/opencode"):
 		return "OpenCode agent"
-	case strings.Contains(command, "aider"):
+	case strings.Contains(command, "aider") || strings.Contains(arguments, "aider.main"):
 		return "Aider agent"
-	case strings.Contains(command, "gemini"):
+	case strings.Contains(command, "gemini") || strings.Contains(arguments, "gemini-cli"):
 		return "Gemini agent"
 	default:
 		return "Development agent"
