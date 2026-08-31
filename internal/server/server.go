@@ -95,6 +95,7 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 		root.HandleFunc("GET /trust-ip", auth.trustIPPage)
 		root.HandleFunc("POST /auth/trust-ip", auth.trustIP)
 		root.Handle("GET /api/trusted-ip", auth.protect(http.HandlerFunc(auth.trustedIPStatus)))
+		root.Handle("POST /api/trusted-ip", auth.protect(http.HandlerFunc(auth.trustCurrentIP)))
 		root.Handle("DELETE /api/trusted-ip", auth.protect(http.HandlerFunc(auth.untrustIP)))
 		if server.Config.FilesRoot != "" {
 			files := auth.protectFiles(http.HandlerFunc(server.privateFile))
@@ -111,7 +112,13 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 		root.Handle("/api/", protected)
 		root.Handle("/media/", protected)
 	}
-	root.Handle("/", publicSite)
+	root.Handle("/", http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/" && (request.Method == http.MethodGet || request.Method == http.MethodHead) {
+			http.Redirect(response, request, "/app/", http.StatusTemporaryRedirect)
+			return
+		}
+		publicSite.ServeHTTP(response, request)
+	}))
 	dashboardHandler := server.securityHeaders(server.requestLog(root))
 	if auth != nil && server.Config.PublicPortHost != "" {
 		return server.hostRouter(dashboardHandler, auth), nil

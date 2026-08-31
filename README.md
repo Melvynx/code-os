@@ -24,7 +24,7 @@ go build -o bin/code-os ./cmd/code-os
 ./bin/code-os service install
 ```
 
-Open `http://127.0.0.1:7890` for the public landing page and `/app/` for the authenticated command center. Configuration defaults to `~/.config/code-os/config.json`; runtime data defaults to `~/.local/share/code-os`.
+Open `http://127.0.0.1:7890`; the root redirects to the authenticated command center under `/app/`. Documentation remains public under `/docs`. Configuration defaults to `~/.config/code-os/config.json`; runtime data defaults to `~/.local/share/code-os`.
 
 On Linux, `service install` enables systemd user lingering, installs and starts Code OS immediately, and enables it for every reboot. Running the command again updates the unit and restarts the daemon on the current binary.
 
@@ -61,7 +61,7 @@ The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedd
 ## Security model
 
 - The daemon binds to `127.0.0.1`; Cloudflare Tunnel is the TLS transport.
-- The landing/docs are public. `/app`, `/api`, `/media`, `/files`, and every `portNNNN` gateway require Code OS origin authentication.
+- Documentation is public. `/` redirects to `/app/`; `/app`, `/api`, `/media`, `/files`, and every `portNNNN` gateway require Code OS origin authentication.
 - Login uses a password-manager-compatible form, rate limiting, a stable 256-bit signing key, and `HttpOnly` secure cookies.
 - After a valid password sign-in, the user can trust the detected exact public IP. Trusted IPs are stored locally in a mode-`0600` file, apply to the dashboard and protected ports, and can be revoked from Settings.
 - There is no anonymous artifact host. Screenshots and verification files stay private and non-cacheable.
@@ -90,7 +90,7 @@ Set the GitHub repository, local checkout, and branch in `/app/settings`. Run `c
 
 ```text
 Git/worktrees ─┐
-Portly JSON ───┼──▶ Code OS (127.0.0.1:7890) ──▶ public landing/docs
+Portly JSON ───┼──▶ Code OS (127.0.0.1:7890) ──▶ public docs
 Screenshots ───┤                  ├──────────────▶ authenticated app/API/files
 Private files ─┘                  └──────────────▶ authenticated port gateway
 ```

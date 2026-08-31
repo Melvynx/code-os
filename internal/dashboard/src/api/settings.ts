@@ -97,3 +97,12 @@ export async function revokeCurrentTrustedIP() {
   })
   return readJSON(response, trustedIPStatusSchema)
 }
+
+export async function trustCurrentIP() {
+  const response = await fetch("/api/trusted-ip", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+  return readJSON(response, trustedIPStatusSchema)
+}

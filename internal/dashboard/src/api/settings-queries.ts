@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { fetchSettings, fetchTrustedIPStatus, revokeCurrentTrustedIP, saveSettings } from "./settings"
+import { fetchSettings, fetchTrustedIPStatus, revokeCurrentTrustedIP, saveSettings, trustCurrentIP } from "./settings"
 
 const settingsKeys = {
   configuration: ["settings", "configuration"] as const,
@@ -27,6 +27,14 @@ export function useRevokeTrustedIP() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: revokeCurrentTrustedIP,
+    onSuccess: (status) => queryClient.setQueryData(settingsKeys.trustedIP, status),
+  })
+}
+
+export function useTrustCurrentIP() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: trustCurrentIP,
     onSuccess: (status) => queryClient.setQueryData(settingsKeys.trustedIP, status),
   })
 }

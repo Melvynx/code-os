@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { PlusIcon } from "lucide-react"
 import { useState, type FormEvent, type ReactNode } from "react"
 
-import { useRevokeTrustedIP, useSaveSettings, useSettings, useTrustedIPStatus } from "@/api/settings-queries"
+import { useRevokeTrustedIP, useSaveSettings, useSettings, useTrustedIPStatus, useTrustCurrentIP } from "@/api/settings-queries"
 import type { Settings } from "@/api/settings"
 import { PageError, PageLoading } from "@/components/page-state"
 import { SectionHeading } from "@/components/section-heading"
@@ -85,6 +86,7 @@ function SettingsForm({ initialSettings }: Readonly<{ initialSettings: Settings 
 
 function TrustedIPControl() {
   const status = useTrustedIPStatus()
+  const trust = useTrustCurrentIP()
   const revoke = useRevokeTrustedIP()
   if (status.isPending) return <div className="border border-[#333] p-4 font-mono text-xs text-[#888]">Reading current IP…</div>
   if (status.isError) return <div role="alert" className="border border-[#e00] p-4 text-sm text-white">{status.error.message}</div>
@@ -96,9 +98,15 @@ function TrustedIPControl() {
           <p className="font-mono text-sm text-white">{status.data.currentIP}</p>
           <p className="mt-1 text-sm text-[#888]">{status.data.trusted ? "This IP skips sign-in." : "This IP still requires sign-in."} {status.data.count} trusted {status.data.count === 1 ? "address" : "addresses"}.</p>
         </div>
-        {status.data.trusted ? <Button type="button" variant="destructive" disabled={revoke.isPending} onClick={() => revoke.mutate()}>{revoke.isPending ? "Revoking" : "Stop trusting this IP"}</Button> : null}
+        {status.data.trusted ? (
+          <Button type="button" variant="destructive" disabled={revoke.isPending} onClick={() => revoke.mutate()}>{revoke.isPending ? "Revoking" : "Stop trusting this IP"}</Button>
+        ) : (
+          <Button type="button" disabled={trust.isPending} onClick={() => trust.mutate()}>
+            <PlusIcon aria-hidden="true" /> {trust.isPending ? "Trusting…" : "Trust this IP"}
+          </Button>
+        )}
       </div>
-      {revoke.isError ? <p role="alert" className="text-sm text-[#ff7b72]">{revoke.error.message}</p> : null}
+      {trust.isError || revoke.isError ? <p role="alert" className="text-sm text-[#ff7b72]">{(trust.error ?? revoke.error)?.message}</p> : null}
     </div>
   )
 }

@@ -99,6 +99,30 @@ func (auth *authenticator) untrustIP(response http.ResponseWriter, request *http
 	})
 }
 
+func (auth *authenticator) trustCurrentIP(response http.ResponseWriter, request *http.Request) {
+	if !isSameOrigin(request) {
+		writeJSON(response, http.StatusForbidden, map[string]string{"error": "same-origin request required"})
+		return
+	}
+	if auth.trustedIPs == nil {
+		writeJSON(response, http.StatusConflict, map[string]string{"error": "trusted IP storage is not configured"})
+		return
+	}
+	address, err := clientIPAddress(request)
+	if err != nil {
+		writeJSON(response, http.StatusBadRequest, map[string]string{"error": "unable to determine client IP"})
+		return
+	}
+	if err := auth.trustedIPs.Add(address); err != nil {
+		writeJSON(response, http.StatusInternalServerError, map[string]string{"error": "could not trust current IP"})
+		return
+	}
+	writeJSON(response, http.StatusOK, trustedIPStatus{
+		CurrentIP: address.String(), Trusted: true,
+		Configured: true, Count: auth.trustedIPs.Count(),
+	})
+}
+
 func (auth *authenticator) trustIPFor(response http.ResponseWriter, request *http.Request, surface authSurface) {
 	if !auth.hasValidSessionFor(request, surface.CookieName) {
 		http.Error(response, "Authentication required", http.StatusUnauthorized)

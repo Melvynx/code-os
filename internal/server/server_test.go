@@ -21,15 +21,30 @@ type authFixture struct {
 	trustedIPsPath string
 }
 
-func TestPublicLandingStaysAvailableWithoutAuthentication(t *testing.T) {
+func TestDashboardRootRedirectsToCommandCenter(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)
 	response := httptest.NewRecorder()
 
 	fixture.handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
 
+	if response.Code != http.StatusTemporaryRedirect || response.Header().Get("Location") != "/app/" {
+		t.Fatalf("root response = %d location %q, want 307 /app/", response.Code, response.Header().Get("Location"))
+	}
+	if challenge := response.Header().Get("WWW-Authenticate"); challenge != "" {
+		t.Fatalf("WWW-Authenticate = %q, want no browser dialog", challenge)
+	}
+}
+
+func TestPublicDocumentationStaysAvailableWithoutAuthentication(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+	response := httptest.NewRecorder()
+
+	fixture.handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/docs/", nil))
+
 	if response.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", response.Code)
+		t.Fatalf("documentation status = %d, want 200", response.Code)
 	}
 	if challenge := response.Header().Get("WWW-Authenticate"); challenge != "" {
 		t.Fatalf("WWW-Authenticate = %q, want no browser dialog", challenge)
@@ -374,6 +389,26 @@ func TestTrustIPMutationRequiresSessionAndSameOrigin(t *testing.T) {
 		t.Fatalf("cross-origin trust status = %d, want 403", crossOriginResponse.Code)
 	}
 	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusUnauthorized)
+}
+
+func TestAuthenticatedSettingsCanTrustCurrentIP(t *testing.T) {
+	t.Parallel()
+	fixture := newTrustedAuthFixture(t)
+	cookie := loginFixtureForIP(t, fixture, "203.0.113.7")
+
+	request := httptest.NewRequest(http.MethodPost, "https://code-os.example/api/trusted-ip", nil)
+	request.Host = "code-os.example"
+	request.Header.Set("Origin", "https://code-os.example")
+	request.Header.Set("X-Forwarded-Proto", "https")
+	request.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"trusted":true`) {
+		t.Fatalf("trust current IP response = %d %q", response.Code, response.Body.String())
+	}
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusOK)
 }
 
 func loginFixture(t *testing.T, fixture authFixture) *http.Cookie {
