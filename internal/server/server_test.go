@@ -36,6 +36,17 @@ func TestPublicLandingStaysAvailableWithoutAuthentication(t *testing.T) {
 	}
 }
 
+func TestAuthenticationFaviconIsPublic(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+	request := httptest.NewRequest(http.MethodGet, "https://code-os.example/favicon.ico", nil)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Fatalf("favicon response = %d content-type %q", response.Code, response.Header().Get("Content-Type"))
+	}
+}
+
 func TestAnonymousDashboardGetsLoginPageInsteadOfBasicAuthDialog(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)

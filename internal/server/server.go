@@ -87,6 +87,7 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 		}
 		root.HandleFunc("GET /login", auth.loginPage)
 		root.HandleFunc("GET /login.css", auth.loginStyles)
+		root.HandleFunc("GET /favicon.ico", auth.loginFavicon)
 		root.HandleFunc("POST /auth/login", auth.login)
 		root.HandleFunc("POST /auth/logout", auth.logout)
 		root.HandleFunc("GET /trust-ip", auth.trustIPPage)
