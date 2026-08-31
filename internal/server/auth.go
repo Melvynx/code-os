@@ -34,6 +34,7 @@ type authenticator struct {
 	sessionKey      []byte
 	templates       *template.Template
 	loginStylesheet []byte
+	favicon         []byte
 	trustedIPs      *trustedIPStore
 	attemptsMutex   sync.Mutex
 	attempts        map[string]loginAttempt
@@ -43,6 +44,7 @@ type loginPageData struct {
 	InvalidCredentials bool
 	Next               string
 	StylesheetPath     string
+	FaviconPath        string
 	FormAction         string
 	PageTitle          string
 	Heading            string
@@ -59,6 +61,7 @@ type authSurface struct {
 	CookieName     string
 	LoginPath      string
 	StylesheetPath string
+	FaviconPath    string
 	LoginAction    string
 	LogoutPath     string
 	TrustPath      string
@@ -72,14 +75,14 @@ type authSurface struct {
 }
 
 var dashboardAuthSurface = authSurface{
-	CookieName: sessionCookieName, LoginPath: "/login", StylesheetPath: "/login.css?v=black-grid-2",
+	CookieName: sessionCookieName, LoginPath: "/login", StylesheetPath: "/login.css?v=black-grid-2", FaviconPath: "/favicon.svg",
 	LoginAction: "/auth/login", LogoutPath: "/auth/logout", TrustPath: "/trust-ip", TrustAction: "/auth/trust-ip", PageTitle: "Sign in — Code OS",
 	Heading: "Sign in to Code OS", Description: "Use the credentials configured on this environment.",
 	Context: "Private development environment", SameSite: http.SameSiteStrictMode, APIsUseJSON401: true,
 }
 
 var gatewayAuthSurface = authSurface{
-	CookieName: gatewaySessionCookieName, LoginPath: "/_code-os/login", StylesheetPath: "/_code-os/login.css?v=black-grid-2",
+	CookieName: gatewaySessionCookieName, LoginPath: "/_code-os/login", StylesheetPath: "/_code-os/login.css?v=black-grid-2", FaviconPath: "/_code-os/favicon.svg",
 	LoginAction: "/_code-os/auth/login", LogoutPath: "/_code-os/auth/logout", TrustPath: "/_code-os/trust-ip", TrustAction: "/_code-os/auth/trust-ip", PageTitle: "Unlock application — Code OS",
 	Heading: "Unlock development app", Description: "Authenticate before opening this private development port.",
 	Context: "Protected by Code OS", SameSite: http.SameSiteLaxMode,
@@ -94,6 +97,10 @@ func newAuthenticator(assets fs.FS, username, password, bypassKey, trustedIPsFil
 	if err != nil {
 		return nil, fmt.Errorf("read login stylesheet: %w", err)
 	}
+	favicon, err := fs.ReadFile(assets, "favicon.svg")
+	if err != nil {
+		return nil, fmt.Errorf("read login favicon: %w", err)
+	}
 	if len(sessionKey) < 32 {
 		return nil, fmt.Errorf("session signing key must contain at least 32 bytes")
 	}
@@ -103,7 +110,7 @@ func newAuthenticator(assets fs.FS, username, password, bypassKey, trustedIPsFil
 	}
 	return &authenticator{
 		username: username, password: password, bypassKey: bypassKey,
-		sessionKey: append([]byte(nil), sessionKey...), templates: templates, loginStylesheet: loginStylesheet, trustedIPs: trustedIPs,
+		sessionKey: append([]byte(nil), sessionKey...), templates: templates, loginStylesheet: loginStylesheet, favicon: favicon, trustedIPs: trustedIPs,
 		attempts: make(map[string]loginAttempt),
 	}, nil
 }
@@ -187,6 +194,12 @@ func (auth *authenticator) loginStyles(response http.ResponseWriter, _ *http.Req
 	response.Header().Set("Content-Type", "text/css; charset=utf-8")
 	response.Header().Set("Cache-Control", "no-store")
 	_, _ = response.Write(auth.loginStylesheet)
+}
+
+func (auth *authenticator) loginFavicon(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "image/svg+xml")
+	response.Header().Set("Cache-Control", "private, max-age=86400")
+	_, _ = response.Write(auth.favicon)
 }
 
 func (auth *authenticator) login(response http.ResponseWriter, request *http.Request) {
@@ -299,7 +312,7 @@ func (auth *authenticator) hasValidSessionFor(request *http.Request, cookieName 
 
 func (auth *authenticator) loginPageData(surface authSurface, nextPath string, invalid bool) loginPageData {
 	return loginPageData{
-		InvalidCredentials: invalid, Next: nextPath, StylesheetPath: surface.StylesheetPath,
+		InvalidCredentials: invalid, Next: nextPath, StylesheetPath: surface.StylesheetPath, FaviconPath: surface.FaviconPath,
 		FormAction: surface.LoginAction, PageTitle: surface.PageTitle, Heading: surface.Heading,
 		Description: surface.Description, Context: surface.Context,
 	}

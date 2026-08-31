@@ -150,8 +150,16 @@ func TestGatewayLoginOffersCurrentIPTrust(t *testing.T) {
 	pageRequest.AddCookie(response.Result().Cookies()[0])
 	pageResponse := httptest.NewRecorder()
 	fixture.handler.ServeHTTP(pageResponse, pageRequest)
-	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), "203.0.113.7") {
+	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), "203.0.113.7") || !strings.Contains(pageResponse.Body.String(), `href="/_code-os/favicon.svg"`) {
 		t.Fatalf("gateway trust page = %d %q", pageResponse.Code, pageResponse.Body.String())
+	}
+
+	faviconRequest := httptest.NewRequest(http.MethodGet, "https://"+host+"/_code-os/favicon.svg", nil)
+	faviconRequest.Host = host
+	faviconResponse := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(faviconResponse, faviconRequest)
+	if faviconResponse.Code != http.StatusOK || faviconResponse.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Fatalf("gateway favicon response = %d content-type %q", faviconResponse.Code, faviconResponse.Header().Get("Content-Type"))
 	}
 }
 

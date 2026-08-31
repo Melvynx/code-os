@@ -14,6 +14,7 @@ type trustedIPStatus struct {
 
 type trustIPPageData struct {
 	StylesheetPath string
+	FaviconPath    string
 	FormAction     string
 	Next           string
 	ClientIP       string
@@ -50,7 +51,7 @@ func (auth *authenticator) trustIPPageFor(response http.ResponseWriter, request 
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "no-store")
 	data := trustIPPageData{
-		StylesheetPath: surface.StylesheetPath, FormAction: surface.TrustAction,
+		StylesheetPath: surface.StylesheetPath, FaviconPath: surface.FaviconPath, FormAction: surface.TrustAction,
 		Next: nextPath, ClientIP: address.String(), Context: surface.Context,
 	}
 	if err := auth.templates.ExecuteTemplate(response, "trust-ip.html", data); err != nil {
