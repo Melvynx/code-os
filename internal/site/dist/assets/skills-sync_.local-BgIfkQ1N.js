@@ -1,4 +1,4 @@
-import{n as e,r as t,t as n}from"./skills-sync-docs-B7oop16E.js";import{i as r}from"./index-BIT4NYlQ.js";var i=r(),a=[{title:`Prepare Git authentication`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Use GitHub CLI over HTTPS so the LaunchAgent can authenticate through the macOS Keychain without depending on an interactive SSH agent.`}),(0,i.jsx)(n,{children:`gh auth status || gh auth login
+import{n as e,r as t,t as n}from"./skills-sync-docs-CNpYKr9v.js";import{i as r}from"./index-BvVUVQd7.js";var i=r(),a=[{title:`Prepare Git authentication`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Use GitHub CLI over HTTPS so the LaunchAgent can authenticate through the macOS Keychain without depending on an interactive SSH agent.`}),(0,i.jsx)(n,{children:`gh auth status || gh auth login
 gh config set git_protocol https
 gh auth setup-git
 git config --global user.name "YOUR_NAME"

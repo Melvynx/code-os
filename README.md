@@ -1,6 +1,6 @@
 # Code OS
 
-Code OS turns a Mac or Linux host into one legible development environment. It discovers repositories, every Git worktree and subproject; reads Portly applications; groups screenshots by feature; synchronizes a private skills repository; and exposes the result through one secure service.
+Code OS turns a Mac or Linux host into one legible development environment. It discovers repositories, every Git worktree and subproject; observes and controls Portly applications and coding agents; groups screenshots by feature; synchronizes a private skills repository; and exposes the result through one secure service.
 
 Project Git inspection is read-only. Portly remains the process supervisor. Code OS is the only supported transport for the dashboard, private files, screenshots, and tunneled development applications.
 
@@ -46,6 +46,7 @@ code-os version     Print the build version
 
 ```bash
 pnpm --dir website install --frozen-lockfile
+pnpm --dir website typecheck
 pnpm --dir website build
 pnpm --dir internal/dashboard install --frozen-lockfile
 pnpm --dir internal/dashboard typecheck
@@ -56,7 +57,7 @@ go vet ./...
 go build -o bin/code-os ./cmd/code-os
 ```
 
-The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedded under `/app/`. The public TanStack Start landing and documentation are embedded at `/`. Both ship inside the Go binary.
+The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedded under `/app/`. The public TanStack Start documentation and product assets ship in the same Go binary. The server routes `/` to the command center and keeps `/docs` public.
 
 ## Security model
 
@@ -72,6 +73,8 @@ The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedd
 - Process controls require an authenticated same-origin `POST`. Application IDs must match a currently running Portly server; agent IDs include both PID and kernel start time to prevent PID-reuse mistakes. Code OS refuses to terminate the process tree that hosts itself.
 
 The Applications page graphs current CPU and resident memory for running Portly apps and detected Codex, Cursor, Claude, OpenCode, Aider, and Gemini agents. Agent child processes are grouped under their owning agent. “Kill” uses Portly for applications and `SIGTERM` for agents; both actions require confirmation.
+
+The complete Portly inventory stays visible below the live resource view, including stopped and failed applications. This keeps process supervision in Portly while making both current load and historical app state visible in one place.
 
 Private image examples:
 

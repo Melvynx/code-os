@@ -1,6 +1,6 @@
 # Code OS
 
-Code OS is an open-source, read-only inventory and command center for development machines.
+Code OS is an open-source command center for local and remote development machines. Project Git inspection is read-only; process controls and the private skills repository are explicit, authenticated mutations.
 
 Documentation: https://code-os.mlvcdn.com/docs
 Skills sync: https://code-os.mlvcdn.com/skills-sync
@@ -11,9 +11,20 @@ Releases: https://github.com/Melvynx/code-os/releases
 
 Core concepts:
 - Discover projects, nested applications, and all Git worktrees.
-- Read Portly-supervised application state.
+- Read the complete Portly application inventory and graph CPU and resident memory for running apps.
+- Detect and group Codex, Cursor, Claude, OpenCode, Aider, and Gemini process trees.
+- Stop an exact Portly app or terminate an exact agent after authenticated confirmation.
 - Index screenshots by feature.
 - Serve an authenticated dashboard and API on loopback.
+- Redirect the public root to the command center while keeping /docs public.
+- Let a signed-in user trust or revoke the current exact IP without editing a file.
 - Allow optional, scoped image-only bypass URLs under /media and /files for coding agents.
 - Expose the dashboard through Cloudflare Tunnel.
 - Synchronize ~/.agents between a VPS and computer using the documented private Git worker.
+- Install a persistent Linux user service that starts at boot without an interactive login.
+
+Security boundaries:
+- Dashboard, API, private files, screenshots, and port gateways require a signed session or explicitly trusted exact IP.
+- Process mutations require same-origin POST requests and exact live identifiers. Code OS refuses to terminate its own host process tree.
+- The media bypass key grants only GET and HEAD image reads under /media and /files. Treat the complete ?bp= URL as a bearer secret.
+- Cloudflare tokens and authentication secrets are stored in permission-restricted local files and are never returned by the settings API.

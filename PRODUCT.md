@@ -19,6 +19,15 @@ Austere, technical, trustworthy, and fast. The product should feel like an opera
 3. Keep security boundaries explicit, especially around tunnels and media URLs.
 4. Treat Portly and Git as sources of truth; avoid duplicate process state.
 5. Make keyboard navigation, visible focus, reduced motion, and WCAG 2.2 AA contrast standard.
+6. Make destructive controls explicit, confirmed, and limited to the exact process shown.
+
+## Current capabilities
+
+- The public root opens the command center; product documentation remains available at `/docs`.
+- Portly applications and Codex, Cursor, Claude, OpenCode, Aider, and Gemini process trees are visible with live CPU and resident memory.
+- Operators can stop an exact Portly application or send `SIGTERM` to an exact agent process after confirmation. Code OS protects its own process tree.
+- A signed session protects the dashboard, APIs, private artifacts, and application gateways. A signed-in user can explicitly trust or revoke the current exact IP from Settings.
+- Linux installs can run at boot without an interactive login. A configured private skills repository synchronizes on a two-minute systemd timer.
 
 ## Visual direction
 

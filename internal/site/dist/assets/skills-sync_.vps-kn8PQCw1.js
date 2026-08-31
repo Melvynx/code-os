@@ -1,0 +1,20 @@
+import{n as e,r as t,t as n}from"./skills-sync-docs-CNpYKr9v.js";import{i as r}from"./index-BvVUVQd7.js";var i=r(),a=[{title:`Back up the VPS library`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Treat the existing VPS library as the initial source of truth. Make a timestamped copy before adding Git metadata.`}),(0,i.jsx)(n,{children:`test -d ~/.agents
+backup_dir="$HOME/.agents.backup.$(date +%Y%m%d-%H%M%S)"
+cp -a ~/.agents "$backup_dir"
+echo "Backup: $backup_dir"`}),(0,i.jsx)(t,{children:`Nothing is deleted or moved. Keep this backup until both machines have completed several successful syncs.`})]})},{title:`Create the private Git source`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`Authenticate GitHub CLI over HTTPS first. Its credential helper remains available to the background timer without an SSH agent.`}),(0,i.jsx)(n,{children:`gh auth status || gh auth login
+gh config set git_protocol https
+gh auth setup-git`}),(0,i.jsxs)(`p`,{children:[`Then initialize `,(0,i.jsx)(`code`,{children:`~/.agents`}),` directly so the repository contains the library contents—not an extra wrapper directory. Exclude credentials before the first commit.`]}),(0,i.jsx)(n,{children:`cd ~/.agents
+test -d .git || git init -b main
+printf '%s
+' '.env' '.env.*' '*.key' '*.pem' '*token*' '*secret*' >> .gitignore
+git config user.name "YOUR_NAME"
+git config user.email "YOUR_EMAIL"
+git add -A
+git commit -m "chore: initialize shared agent skills"
+gh repo create code-os-skills --private --source=. --remote=origin --push`}),(0,i.jsx)(t,{security:!0,children:`Keep the repository private. Never include Cloudflare tokens, dashboard credentials, bypass keys, SSH keys, or machine-specific environment files.`}),(0,i.jsxs)(`p`,{children:[`If the private repository already exists, replace the final command with `,(0,i.jsx)(`code`,{children:`git remote add origin https://github.com/YOUR_ACCOUNT/code-os-skills.git`}),` and `,(0,i.jsx)(`code`,{children:`git push -u origin main`}),`.`]})]})},{title:`Configure and test synchronization`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsxs)(`p`,{children:[`Open `,(0,i.jsx)(`code`,{children:`/app/settings`}),` and set the private GitHub repository URL, `,(0,i.jsx)(`code`,{children:`~/.agents`}),` checkout, and branch. The built-in worker commits local changes, rebases, and pushes. A directory lock prevents overlapping executions.`]}),(0,i.jsx)(n,{children:`code-os skills-sync
+git -C ~/.agents status --short --branch`})]})},{title:`Enable Code OS and the timer`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)(`p`,{children:`The service installer starts Code OS now, enables it after every reboot, and creates the two-minute skills-sync timer from the same configuration. It also enables systemd user lingering so neither service depends on an interactive SSH login.`}),(0,i.jsx)(n,{children:`code-os service install
+code-os doctor`})]})},{title:`Verify the VPS side`,children:(0,i.jsxs)(i.Fragment,{children:[(0,i.jsxs)(`p`,{children:[`Trigger one execution, inspect its log, and confirm that the checkout is clean and tracking `,(0,i.jsx)(`code`,{children:`origin/main`}),`.`]}),(0,i.jsx)(n,{children:`systemctl --user start code-os-skills-sync.service
+journalctl --user -u code-os-skills-sync.service -n 30 --no-pager
+git -C ~/.agents status --short --branch
+systemctl --user list-timers code-os-skills-sync.timer
+loginctl show-user "$USER" -p Linger`}),(0,i.jsx)(t,{children:`A healthy run ends with “is up to date.” If Git reports a conflict, the worker stops without discarding either side.`})]})}];function o(){return(0,i.jsx)(e,{side:`VPS`,title:`Publish the VPS skill library.`,description:`Turn the existing ~/.agents directory into the private source shared by every development machine.`,steps:a,otherSide:`your computer`,otherUrl:`/skills-sync/local`})}export{o as component};

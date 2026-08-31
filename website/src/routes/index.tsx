@@ -13,7 +13,7 @@ const installCommand = 'curl -L https://github.com/Melvynx/code-os/releases/late
 
 const capabilities = [
   { icon: FolderGit2, title: 'Projects and worktrees', copy: 'Discover nested repositories, linked worktrees, branches, and dirty state from every configured root.' },
-  { icon: Play, title: 'Running applications', copy: 'Read Portly process state without launching duplicates. See commands, ports, health, and memory in context.' },
+  { icon: Play, title: 'Processes and agents', copy: 'See live CPU and memory for Portly apps and grouped coding agents. Stop the exact process after an explicit confirmation.' },
   { icon: Camera, title: 'Visual evidence', copy: 'Group screenshots by feature and expose narrowly scoped media URLs that agents can actually render.' },
 ]
 
@@ -59,7 +59,7 @@ function HomePage() {
       </section>
 
       <section className="product-strip" aria-label="Code OS facts">
-        <div className="container"><span>All Git worktrees</span><span>Loopback by default</span><span>Portly-aware</span><span>Open source · MIT</span></div>
+        <div className="container"><span>All Git worktrees</span><span>Loopback by default</span><span>Boot-persistent</span><span>Open source · MIT</span></div>
       </section>
 
       <section className="section feature-intro" id="capabilities">
@@ -97,15 +97,15 @@ function HomePage() {
         <div className="container feature-row-grid">
           <div className="process-preview" aria-label="Running applications preview">
             <div className="preview-title"><Play /><span>Applications</span><small>Portly state</small></div>
-            <ProcessRow name="lumail.io / dev" port="3002" memory="8.4 GB" />
-            <ProcessRow name="code-os / website" port="3004" memory="412 MB" />
-            <ProcessRow name="ai-builder-club / web" port="3100" memory="841 MB" />
+            <ProcessRow name="lumail.io / dev" port="3002" cpu="18.2%" memory="8.4 GB" />
+            <ProcessRow name="Cursor agent" port="agent" cpu="7.1%" memory="612 MB" />
+            <ProcessRow name="ai-builder-club / web" port="3100" cpu="3.4%" memory="841 MB" />
           </div>
           <div className="feature-copy">
             <p className="feature-label">Runtime</p>
             <h2>Know what is running before starting anything else.</h2>
-            <p>Portly stays responsible for process supervision. Code OS makes its live state visible beside the repository that owns each application.</p>
-            <a href="https://portly.melvynx.dev" target="_blank" rel="noreferrer">Learn about Portly <ArrowRight size={15} /></a>
+            <p>Portly stays responsible for application supervision. Code OS adds live CPU and memory for those apps and for grouped Codex, Cursor, Claude, OpenCode, Aider, and Gemini agents, with confirmed controls for cutting the exact process.</p>
+            <Link to="/docs" hash="runtime">Read about process controls <ArrowRight size={15} /></Link>
           </div>
         </div>
       </section>
@@ -115,11 +115,12 @@ function HomePage() {
           <div className="feature-copy">
             <p className="feature-label">Security boundary</p>
             <h2>Remote visibility without a public application port.</h2>
-            <p>Code OS binds to loopback. Cloudflare Tunnel carries HTTPS. Origin sessions protect the dashboard and every app port; a scoped key can render one private image.</p>
+            <p>Code OS binds to loopback. Cloudflare Tunnel carries HTTPS. Signed sessions or an explicitly trusted exact IP protect the dashboard and every app port; a scoped key can render one private image.</p>
             <Link to="/docs" hash="security">Read the security model <ArrowRight size={15} /></Link>
           </div>
           <div className="security-list">
             <SecurityRow icon={ShieldCheck} title="Dashboard session" detail="HTTP-only authenticated session" state="required" />
+            <SecurityRow icon={ShieldCheck} title="Trusted exact IP" detail="Added or revoked after sign-in" state="explicit" />
             <SecurityRow icon={Camera} title="Media bypass" detail="GET and HEAD images under /media and /files" state="scoped" />
             <SecurityRow icon={Cloud} title="Cloudflare Tunnel" detail="TLS at your own hostname" state="private" />
           </div>
@@ -143,8 +144,8 @@ function GitPreviewRow({ project, branch, changes, tone }: Readonly<{ project: s
   return <div className="git-preview-row"><span className={`preview-dot ${tone}`} /><span><b>{project}</b><small>{branch}</small></span><strong>{changes} changes</strong></div>
 }
 
-function ProcessRow({ name, port, memory }: Readonly<{ name: string; port: string; memory: string }>) {
-  return <div className="process-preview-row"><span><b>{name}</b><small>pnpm dev</small></span><code>{port}</code><em>healthy</em><strong>{memory}</strong></div>
+function ProcessRow({ name, port, cpu, memory }: Readonly<{ name: string; port: string; cpu: string; memory: string }>) {
+  return <div className="process-preview-row"><span><b>{name}</b><small>{port === 'agent' ? 'grouped process tree' : `port ${port}`}</small></span><code>{cpu}</code><em>{port === 'agent' ? 'agent' : 'healthy'}</em><strong>{memory}</strong></div>
 }
 
 function SecurityRow({ icon: Icon, title, detail, state }: Readonly<{ icon: typeof ShieldCheck; title: string; detail: string; state: string }>) {
