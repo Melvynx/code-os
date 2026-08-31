@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { fetchSnapshot, refreshSnapshot } from "./client"
+import { fetchSnapshot, refreshSnapshot, stopApplication, terminateAgent } from "./client"
 
 const REFRESH_INTERVAL = 30_000
 const SNAPSHOT_STALE_TIME = 15_000
@@ -26,6 +26,25 @@ export function useRefreshSnapshot() {
     mutationFn: refreshSnapshot,
     onSuccess: (snapshot) => {
       queryClient.setQueryData(snapshotKeys.all, snapshot)
+    },
+  })
+}
+
+export function useStopApplication() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: stopApplication,
+    onSuccess: (snapshot) => queryClient.setQueryData(snapshotKeys.all, snapshot),
+  })
+}
+
+export function useTerminateAgent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: terminateAgent,
+    onSuccess: async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 500))
+      await queryClient.invalidateQueries({ queryKey: snapshotKeys.all })
     },
   })
 }

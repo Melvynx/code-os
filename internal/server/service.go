@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/melvynx/code-os/internal/model"
 	"github.com/melvynx/code-os/internal/portly"
+	"github.com/melvynx/code-os/internal/processes"
 	"github.com/melvynx/code-os/internal/projects"
 	"github.com/melvynx/code-os/internal/screenshots"
 	"github.com/melvynx/code-os/internal/store"
@@ -17,6 +19,7 @@ type Service struct {
 	Projects     projects.Scanner
 	ProjectRoots []string
 	Portly       portly.Client
+	Processes    processes.Scanner
 	Screenshots  screenshots.Indexer
 	Store        *store.Store
 
@@ -36,6 +39,12 @@ func (service *Service) Refresh(ctx context.Context) model.Snapshot {
 		snapshot.Warnings = append(snapshot.Warnings, err.Error())
 	} else {
 		snapshot.Apps = applications
+	}
+	agents, err := service.Processes.Scan()
+	if err != nil {
+		snapshot.Warnings = append(snapshot.Warnings, err.Error())
+	} else {
+		snapshot.Agents = agents
 	}
 
 	images, err := service.Screenshots.Scan()
@@ -63,6 +72,50 @@ func (service *Service) Refresh(ctx context.Context) model.Snapshot {
 		}
 	}
 	return snapshot
+}
+
+func (service *Service) StopApplication(ctx context.Context, id string) error {
+	service.mutex.RLock()
+	allowed := false
+	for _, application := range service.snapshot.Apps {
+		if application.ID == id && application.State == "running" {
+			allowed = true
+			break
+		}
+	}
+	service.mutex.RUnlock()
+	if !allowed {
+		return errors.New("running application not found")
+	}
+	return service.Portly.Stop(ctx, id)
+}
+
+func (service *Service) TerminateAgent(id string) error {
+	service.mutex.RLock()
+	allowed := false
+	for _, agent := range service.snapshot.Agents {
+		if agent.ID == id {
+			allowed = true
+			break
+		}
+	}
+	service.mutex.RUnlock()
+	if !allowed {
+		return errors.New("agent process not found")
+	}
+	if err := service.Processes.Terminate(id); err != nil {
+		return err
+	}
+	service.mutex.Lock()
+	agents := service.snapshot.Agents[:0]
+	for _, agent := range service.snapshot.Agents {
+		if agent.ID != id {
+			agents = append(agents, agent)
+		}
+	}
+	service.snapshot.Agents = agents
+	service.mutex.Unlock()
+	return nil
 }
 
 func (service *Service) Snapshot() model.Snapshot {

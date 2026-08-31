@@ -216,6 +216,32 @@ func TestAuthenticatedUnknownAPIStaysNotFound(t *testing.T) {
 	}
 }
 
+func TestProcessMutationRequiresSameOriginAndKnownTarget(t *testing.T) {
+	t.Parallel()
+	server := HTTPServer{Service: &Service{}}
+
+	crossOrigin := httptest.NewRequest(http.MethodPost, "https://code-os.example/api/agents/12:34/terminate", nil)
+	crossOrigin.Host = "code-os.example"
+	crossOrigin.Header.Set("Origin", "https://attacker.example")
+	crossOrigin.Header.Set("X-Forwarded-Proto", "https")
+	crossOriginResponse := httptest.NewRecorder()
+	server.terminateAgent(crossOriginResponse, crossOrigin)
+	if crossOriginResponse.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin termination = %d, want 403", crossOriginResponse.Code)
+	}
+
+	unknown := httptest.NewRequest(http.MethodPost, "https://code-os.example/api/agents/12:34/terminate", nil)
+	unknown.Host = "code-os.example"
+	unknown.Header.Set("Origin", "https://code-os.example")
+	unknown.Header.Set("X-Forwarded-Proto", "https")
+	unknown.SetPathValue("id", "12:34")
+	unknownResponse := httptest.NewRecorder()
+	server.terminateAgent(unknownResponse, unknown)
+	if unknownResponse.Code != http.StatusConflict {
+		t.Fatalf("unknown agent termination = %d, want 409", unknownResponse.Code)
+	}
+}
+
 func TestLoginFormCreatesSessionForPasswordManagerFlow(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)

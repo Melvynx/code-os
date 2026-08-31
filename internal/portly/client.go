@@ -77,3 +77,16 @@ func (client Client) Applications(ctx context.Context) ([]model.Application, err
 	}
 	return applications, nil
 }
+
+func (client Client) Stop(ctx context.Context, id string) error {
+	command := exec.CommandContext(ctx, client.Binary, "stop", id, "--json")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		message := strings.TrimSpace(string(output))
+		if message == "" {
+			message = err.Error()
+		}
+		return fmt.Errorf("portly stop: %s", message)
+	}
+	return nil
+}

@@ -56,6 +56,16 @@ const applicationSchema = z.object({
   restartCount: z.number().int().nonnegative(),
 })
 
+const agentProcessSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  command: z.string(),
+  pid: z.number().int().positive(),
+  cpuPercent: z.number().nonnegative(),
+  memoryBytes: z.number().nonnegative(),
+  processCount: z.number().int().positive(),
+})
+
 const screenshotSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -70,6 +80,7 @@ export const snapshotSchema = z.object({
   generatedAt: z.string(),
   projects: z.array(projectSchema).nullish().transform((items) => items ?? []),
   applications: z.array(applicationSchema).nullish().transform((items) => items ?? []),
+  agents: z.array(agentProcessSchema).nullish().transform((items) => items ?? []),
   screenshots: z.array(screenshotSchema).nullish().transform((items) => items ?? []),
   warnings: z.array(z.string()).nullish().transform((items) => items ?? []),
 })
@@ -79,4 +90,5 @@ export type Project = z.infer<typeof projectSchema>
 export type GitState = z.infer<typeof gitStateSchema>
 export type Worktree = z.infer<typeof worktreeSchema>
 export type Application = z.infer<typeof applicationSchema>
+export type AgentProcess = z.infer<typeof agentProcessSchema>
 export type Screenshot = z.infer<typeof screenshotSchema>

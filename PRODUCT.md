@@ -2,7 +2,7 @@
 
 ## Product
 
-Code OS is a self-hosted command center that turns a Mac or Linux VPS into a consistent AI-assisted development environment. It discovers projects and subprojects, surfaces Git work in progress, observes Portly-managed applications, indexes visual evidence, and will later synchronize shared agent skills through Git.
+Code OS is a self-hosted command center that turns a Mac or Linux VPS into a consistent AI-assisted development environment. It discovers projects and subprojects, surfaces Git work in progress, observes and controls Portly-managed applications, groups agent CPU and memory usage, indexes visual evidence, and synchronizes shared agent skills through Git.
 
 ## Users
 

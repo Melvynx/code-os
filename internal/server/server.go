@@ -46,6 +46,8 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 	protected.HandleFunc("GET /api/overview", server.overview)
 	protected.HandleFunc("GET /api/snapshot", server.snapshot)
 	protected.HandleFunc("POST /api/refresh", server.refresh)
+	protected.HandleFunc("POST /api/applications/{id}/stop", server.stopApplication)
+	protected.HandleFunc("POST /api/agents/{id}/terminate", server.terminateAgent)
 	protected.HandleFunc("GET /api/health", server.health)
 	protected.HandleFunc("GET /api/settings", server.settings)
 	protected.HandleFunc("PUT /api/settings", server.updateSettings)
@@ -139,6 +141,32 @@ func (server HTTPServer) refresh(response http.ResponseWriter, request *http.Req
 	ctx, cancel := contextWithTimeout(request, 30*time.Second)
 	defer cancel()
 	writeJSON(response, http.StatusOK, server.Service.Refresh(ctx))
+}
+
+func (server HTTPServer) stopApplication(response http.ResponseWriter, request *http.Request) {
+	if !isSameOrigin(request) {
+		writeJSON(response, http.StatusForbidden, map[string]string{"error": "same-origin request required"})
+		return
+	}
+	ctx, cancel := contextWithTimeout(request, 30*time.Second)
+	defer cancel()
+	if err := server.Service.StopApplication(ctx, request.PathValue("id")); err != nil {
+		writeJSON(response, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(response, http.StatusOK, server.Service.Refresh(ctx))
+}
+
+func (server HTTPServer) terminateAgent(response http.ResponseWriter, request *http.Request) {
+	if !isSameOrigin(request) {
+		writeJSON(response, http.StatusForbidden, map[string]string{"error": "same-origin request required"})
+		return
+	}
+	if err := server.Service.TerminateAgent(request.PathValue("id")); err != nil {
+		writeJSON(response, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(response, http.StatusAccepted, map[string]bool{"ok": true})
 }
 
 func (server HTTPServer) health(response http.ResponseWriter, _ *http.Request) {

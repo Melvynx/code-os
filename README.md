@@ -21,10 +21,12 @@ go build -o bin/code-os ./cmd/code-os
   --public-port-host 'port{port}.mlvcdn.com' \
   --skills-repository git@github.com:YOUR_ACCOUNT/agents-config.git \
   --skills-directory ~/.agents
-./bin/code-os dashboard
+./bin/code-os service install
 ```
 
 Open `http://127.0.0.1:7890` for the public landing page and `/app/` for the authenticated command center. Configuration defaults to `~/.config/code-os/config.json`; runtime data defaults to `~/.local/share/code-os`.
+
+On Linux, `service install` enables systemd user lingering, installs and starts Code OS immediately, and enables it for every reboot. Running the command again updates the unit and restarts the daemon on the current binary.
 
 ## Commands
 
@@ -67,6 +69,9 @@ The React/Vite/TanStack Router dashboard uses shadcn/ui primitives and is embedd
 - Cloudflare token values are write-only, stored in a `0600` file, and never returned by the settings API.
 - Settings only accept absolute non-root paths and credential-free GitHub repository URLs.
 - The gateway proxies only running, healthy ports reported by Portly. Local agents continue to use loopback directly.
+- Process controls require an authenticated same-origin `POST`. Application IDs must match a currently running Portly server; agent IDs include both PID and kernel start time to prevent PID-reuse mistakes. Code OS refuses to terminate the process tree that hosts itself.
+
+The Applications page graphs current CPU and resident memory for running Portly apps and detected Codex, Cursor, Claude, OpenCode, Aider, and Gemini agents. Agent child processes are grouped under their owning agent. “Kill” uses Portly for applications and `SIGTERM` for agents; both actions require confirmation.
 
 Private image examples:
 

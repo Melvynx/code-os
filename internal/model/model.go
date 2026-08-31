@@ -62,6 +62,16 @@ type Application struct {
 	RestartCount        int     `json:"restartCount"`
 }
 
+type AgentProcess struct {
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	Command      string  `json:"command"`
+	PID          int     `json:"pid"`
+	CPUPercent   float64 `json:"cpuPercent"`
+	MemoryBytes  int64   `json:"memoryBytes"`
+	ProcessCount int     `json:"processCount"`
+}
+
 type Screenshot struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
@@ -74,11 +84,12 @@ type Screenshot struct {
 }
 
 type Snapshot struct {
-	GeneratedAt time.Time     `json:"generatedAt"`
-	Projects    []Project     `json:"projects"`
-	Apps        []Application `json:"applications"`
-	Screenshots []Screenshot  `json:"screenshots"`
-	Warnings    []string      `json:"warnings"`
+	GeneratedAt time.Time      `json:"generatedAt"`
+	Projects    []Project      `json:"projects"`
+	Apps        []Application  `json:"applications"`
+	Agents      []AgentProcess `json:"agents"`
+	Screenshots []Screenshot   `json:"screenshots"`
+	Warnings    []string       `json:"warnings"`
 }
 
 type Overview struct {

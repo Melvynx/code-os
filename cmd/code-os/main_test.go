@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +27,16 @@ func TestEnsurePasswordFileSecuresExistingSecret(t *testing.T) {
 	}
 	if string(value) != "existing-secret\n" {
 		t.Fatal("existing secret was replaced")
+	}
+}
+
+func TestSystemdUnitStartsCodeOSAtBoot(t *testing.T) {
+	t.Parallel()
+	unit := renderUnit("/usr/local/bin/code-os", "/home/dev/.config/code-os/config.json", "/home/dev/.local/share/code-os", "")
+	for _, expected := range []string{"Restart=on-failure", "WantedBy=default.target", "After=network-online.target"} {
+		if !strings.Contains(unit, expected) {
+			t.Errorf("systemd unit missing %q", expected)
+		}
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -198,7 +199,7 @@ func setup(arguments []string) error {
 	} else {
 		fmt.Printf("Public hostname: https://%s (Cloudflare Access required)\n", cfg.Cloudflare.DashboardHost)
 	}
-	fmt.Println("Next: code-os doctor")
+	fmt.Println("Next: code-os service install && code-os doctor")
 	return nil
 }
 
@@ -333,6 +334,13 @@ func doctor(arguments []string) error {
 		check{"Portly", cfg.PortlyBinary, commandExists(cfg.PortlyBinary), true},
 		check{"Git", "git", commandExists("git"), true},
 	)
+	if runtime.GOOS == "linux" {
+		checks = append(checks,
+			check{"Code OS user service", "enabled", commandSucceeds("systemctl", "--user", "is-enabled", "code-os.service"), true},
+			check{"Code OS runtime", "active", commandSucceeds("systemctl", "--user", "is-active", "code-os.service"), true},
+			check{"Boot without login", "systemd linger enabled", lingerEnabled(), true},
+		)
+	}
 	if cfg.Cloudflare.TokenFile != "" {
 		checks = append(checks, check{"Cloudflare token file", cfg.Cloudflare.TokenFile, isRegularFile(cfg.Cloudflare.TokenFile), false})
 	}
@@ -425,7 +433,28 @@ func serviceCommand(arguments []string) error {
 		fmt.Printf("Installed %s and %s\n", syncServicePath, syncTimerPath)
 	}
 	fmt.Printf("Installed %s\n", unitPath)
-	fmt.Println("Enable with: systemctl --user daemon-reload && systemctl --user enable --now code-os.service")
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("resolve current user for boot persistence: %w", err)
+	}
+	if err := runCommand("loginctl", "enable-linger", currentUser.Username); err != nil {
+		return fmt.Errorf("enable Code OS at boot without an interactive login: %w", err)
+	}
+	if err := runCommand("systemctl", "--user", "daemon-reload"); err != nil {
+		return err
+	}
+	if err := runCommand("systemctl", "--user", "enable", "code-os.service"); err != nil {
+		return err
+	}
+	if err := runCommand("systemctl", "--user", "restart", "code-os.service"); err != nil {
+		return err
+	}
+	if cfg.Skills.Repository != "" {
+		if err := runCommand("systemctl", "--user", "enable", "--now", "code-os-skills-sync.timer"); err != nil {
+			return err
+		}
+	}
+	fmt.Println("Code OS is enabled now and after every reboot")
 	return nil
 }
 
@@ -667,6 +696,19 @@ func commandExists(command string) bool {
 	}
 	_, err := exec.LookPath(command)
 	return err == nil
+}
+
+func commandSucceeds(name string, arguments ...string) bool {
+	return exec.Command(name, arguments...).Run() == nil
+}
+
+func lingerEnabled() bool {
+	currentUser, err := user.Current()
+	if err != nil {
+		return false
+	}
+	output, err := exec.Command("loginctl", "show-user", currentUser.Username, "-p", "Linger", "--value").Output()
+	return err == nil && strings.TrimSpace(string(output)) == "yes"
 }
 
 func renderUnit(executable, configPath, dataDir, tokenFile string) string {
