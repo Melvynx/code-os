@@ -35,10 +35,10 @@ describe("GitCard", () => {
   it("uses semantic colors only for active Git change values", () => {
     render(<GitCard project={project} worktree={worktree} />)
 
-    expect(screen.getByText("Modified")).toHaveClass("text-[var(--git-modified)]")
-    expect(screen.getByText("Deleted")).toHaveClass("text-[var(--git-deleted)]")
-    expect(screen.getByText("Untracked")).toHaveClass("text-[var(--git-untracked)]")
-    expect(screen.getByText("Added")).not.toHaveClass("text-[var(--git-added)]")
+    expect(screen.getByText("Modified")).toHaveClass("text-git-modified")
+    expect(screen.getByText("Deleted")).toHaveClass("text-git-deleted")
+    expect(screen.getByText("Untracked")).toHaveClass("text-git-untracked")
+    expect(screen.getByText("Added")).not.toHaveClass("text-git-added")
   })
 
   it("keeps labels alongside every colored value", () => {

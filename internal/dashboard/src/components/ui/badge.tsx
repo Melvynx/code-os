@@ -1,42 +1,53 @@
-import { Slot } from "radix-ui"
+import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import type * as React from "react"
+import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wider",
+  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        neutral: "border-[#333] bg-[#111] text-[#888]",
-        success: "border-[#50e3c2]/50 bg-black text-[#50e3c2]",
-        warning: "border-[#333] bg-[#111] text-white",
-        error: "border-[#e00]/60 bg-black text-[#e00]",
-        link: "border-[#0070f3]/60 bg-black text-[#0070f3]",
-        modified: "border-[var(--git-modified)] bg-[var(--git-modified-surface)] text-[var(--git-modified)]",
-        added: "border-[var(--git-added)] bg-[var(--git-added-surface)] text-[var(--git-added)]",
-        deleted: "border-[var(--git-deleted)] bg-[var(--git-deleted-surface)] text-[var(--git-deleted)]",
-        untracked: "border-[var(--git-untracked)] bg-[var(--git-untracked-surface)] text-[var(--git-untracked)]",
-        conflict: "border-[var(--git-conflict)] bg-[var(--git-conflict-surface)] text-[var(--git-conflict)]",
-        info: "border-[var(--git-info)] bg-[var(--git-info-surface)] text-[var(--git-info)]",
+        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        secondary:
+          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+        destructive:
+          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+        outline:
+          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
+        ghost:
+          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
+        link: "text-primary underline-offset-4 hover:underline",
+        success: "bg-success/15 text-success",
+        error: "bg-destructive/10 text-destructive",
+        warning: "bg-warning/15 text-warning",
+        info: "bg-info/15 text-info",
+        neutral: "bg-secondary text-secondary-foreground",
+        modified: "bg-git-modified-surface text-git-modified",
+        untracked: "bg-git-untracked-surface text-git-untracked",
+        conflict: "bg-git-conflict-surface text-git-conflict",
       },
     },
-    defaultVariants: { variant: "neutral" },
-  },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
 )
 
 function Badge({
   className,
-  variant,
+  variant = "default",
   asChild = false,
   ...props
 }: React.ComponentProps<"span"> &
   VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Component = asChild ? Slot.Root : "span"
+  const Comp = asChild ? Slot.Root : "span"
+
   return (
-    <Component
+    <Comp
       data-slot="badge"
+      data-variant={variant}
       className={cn(badgeVariants({ variant }), className)}
       {...props}
     />

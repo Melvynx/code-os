@@ -2,7 +2,7 @@ import { FolderGit2Icon } from "lucide-react"
 
 import type { Project } from "@/api/schema"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { WorktreeList } from "@/components/worktree-list"
 import { getProjectChangeCount, getProjectWorktrees } from "@/lib/worktrees"
 
@@ -11,24 +11,24 @@ export function ProjectCard({ project }: Readonly<{ project: Project }>) {
   const worktreeCount = getProjectWorktrees(project).length
 
   return (
-    <Card className="min-w-0 transition-colors hover:border-white">
+    <Card className="min-w-0 transition-colors hover:ring-foreground/20">
       <CardHeader>
-        <div className="min-w-0">
-          <FolderGit2Icon aria-hidden="true" className="mb-4 size-4 text-[#888]" />
-          <CardTitle>{project.name}</CardTitle>
-          <CardDescription>{project.path}</CardDescription>
-        </div>
-        <Badge variant={changeCount ? "warning" : "success"}>{changeCount ? `${changeCount} changes` : "Clean"}</Badge>
+        <FolderGit2Icon aria-hidden="true" className="mb-2 text-muted-foreground" />
+        <CardTitle>{project.name}</CardTitle>
+        <CardDescription>{project.path}</CardDescription>
+        <CardAction>
+          <Badge variant={changeCount ? "warning" : "success"}>{changeCount ? `${changeCount} changes` : "Clean"}</Badge>
+        </CardAction>
       </CardHeader>
       <CardContent>
-        <dl className="grid grid-cols-2 gap-px border border-[#333] bg-[#333]">
-          <div className="bg-black p-3">
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-[#888]">Worktrees</dt>
-            <dd className="mt-2 font-mono text-sm tabular-nums text-white">{worktreeCount}</dd>
+        <dl className="grid grid-cols-2 divide-x border">
+          <div className="p-3">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Worktrees</dt>
+            <dd className="mt-2 font-mono text-sm tabular-nums">{worktreeCount}</dd>
           </div>
-          <div className="bg-black p-3">
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-[#888]">Subprojects</dt>
-            <dd className="mt-2 font-mono text-sm tabular-nums text-white">{project.subprojects.length}</dd>
+          <div className="p-3">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Subprojects</dt>
+            <dd className="mt-2 font-mono text-sm tabular-nums">{project.subprojects.length}</dd>
           </div>
         </dl>
         <WorktreeList project={project} />

@@ -3,8 +3,10 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useSnapshot, useStopApplication, useTerminateAgent } from "@/api/queries"
 import { ApplicationTable } from "@/components/application-table"
 import { EmptyState, PageError, PageLoading } from "@/components/page-state"
-import { SectionHeading } from "@/components/section-heading"
+import { ResourceChart } from "@/components/resource-chart"
 import { ResourceUsage } from "@/components/resource-usage"
+import { SectionHeading } from "@/components/section-heading"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card } from "@/components/ui/card"
 import { useDashboardSearch } from "@/contexts/search-context"
 import { matchesQuery } from "@/lib/format"
@@ -28,8 +30,9 @@ function ApplicationsPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <SectionHeading title="Applications" description="Persistent development processes supervised by Portly." />
+      <ResourceChart />
       <ResourceUsage
         applications={applications}
         agents={agents}
@@ -39,12 +42,13 @@ function ApplicationsPage() {
         onTerminateAgent={(id) => terminateAgent.mutateAsync(id)}
       />
       {stopApplication.isError || terminateAgent.isError ? (
-        <div role="alert" className="border border-[#e00] px-4 py-3 font-mono text-xs text-[#e00]">
-          {(stopApplication.error ?? terminateAgent.error)?.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Process control failed</AlertTitle>
+          <AlertDescription>{(stopApplication.error ?? terminateAgent.error)?.message}</AlertDescription>
+        </Alert>
       ) : null}
       {applications.length ? (
-        <Card className="overflow-hidden rounded-none">
+        <Card className="gap-0 py-0">
           <ApplicationTable applications={applications} pendingApplicationId={stopApplication.isPending ? stopApplication.variables : undefined} onStop={(id) => stopApplication.mutateAsync(id)} />
         </Card>
       ) : <EmptyState title="No matching applications" description="Start an application through Portly or try another search." />}

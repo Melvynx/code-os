@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RouterProvider } from "@tanstack/react-router"
+import { ThemeProvider } from "next-themes"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
+import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { router } from "@/router"
 import "@/styles.css"
@@ -21,10 +23,13 @@ if (!rootElement) throw new Error("Dashboard root element is missing")
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <RouterProvider router={router} />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <RouterProvider router={router} />
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

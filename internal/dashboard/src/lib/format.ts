@@ -20,12 +20,16 @@ export function formatBytes(value: number) {
 }
 
 export function formatRelativeTime(value: string, currentTime = Date.now()) {
-  const elapsed = Math.max(0, currentTime - new Date(value).getTime())
-
-  if (elapsed < MINUTE) return `${Math.floor(elapsed / SECOND)}s ago`
-  if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m ago`
-  if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h ago`
-  return `${Math.floor(elapsed / DAY)}d ago`
+  const elapsed = currentTime - new Date(value).getTime()
+  const duration = Math.abs(elapsed)
+  const unit = duration < MINUTE
+    ? `${Math.floor(duration / SECOND)}s`
+    : duration < HOUR
+      ? `${Math.floor(duration / MINUTE)}m`
+      : duration < DAY
+        ? `${Math.floor(duration / HOUR)}h`
+        : `${Math.floor(duration / DAY)}d`
+  return elapsed >= 0 ? `${unit} ago` : `in ${unit}`
 }
 
 export function getChangeCount(project: Project) {

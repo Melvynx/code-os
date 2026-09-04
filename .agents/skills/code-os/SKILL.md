@@ -13,6 +13,8 @@ Use the local Code OS CLI and configuration as the source of truth.
 2. Read `~/.config/code-os/config.json` for the loopback address, dashboard hostname, and credential file paths.
 3. Run `code-os status` for a summary or `code-os scan` for the current snapshot.
 4. Inspect the user service with `systemctl --user status code-os.service` on Linux.
+5. Open `/app/skills-sync` for `~/.agents` origin match, timer state, and a same-origin **Sync now**.
+6. Open `/app/status` for image-pipeline health: roots, bypass key mode, decode counts, and authenticated media render.
 
 Keep Git inspection read-only. Use Portly for persistent development processes.
 

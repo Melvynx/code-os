@@ -21,7 +21,7 @@ function ProjectsPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <SectionHeading title="Projects, worktrees, and subprojects" description="Repositories discovered across configured roots, including every linked Git worktree." />
       {projects.length ? <section aria-label="Discovered projects" className="grid gap-4 xl:grid-cols-2">{projects.map((project) => <ProjectCard key={project.id} project={project} />)}</section> : <EmptyState title="No matching projects" description="Try another search or refresh the environment." />}
     </div>

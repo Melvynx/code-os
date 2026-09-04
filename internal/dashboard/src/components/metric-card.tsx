@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 
+import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
 type MetricCardProps = {
   icon: LucideIcon
   label: string
@@ -9,13 +11,15 @@ type MetricCardProps = {
 
 export function MetricCard({ icon: Icon, label, value, hint }: MetricCardProps) {
   return (
-    <article className="rounded-lg border border-[#333] bg-black p-5 transition-colors hover:border-white">
-      <div className="flex items-center justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-wider text-[#888]">{label}</p>
-        <Icon aria-hidden="true" className="size-4 text-[#888]" />
-      </div>
-      <p className="mt-5 font-mono text-3xl tabular-nums text-white">{value}</p>
-      <p className="mt-1 text-xs text-[#888]">{hint}</p>
-    </article>
+    <Card className="transition-colors hover:ring-foreground/20">
+      <CardHeader>
+        <CardDescription className="font-mono text-[10px] uppercase tracking-wider">{label}</CardDescription>
+        <CardTitle className="font-mono text-3xl tabular-nums">{value}</CardTitle>
+        <CardDescription>{hint}</CardDescription>
+        <CardAction>
+          <Icon aria-hidden="true" className="text-muted-foreground" />
+        </CardAction>
+      </CardHeader>
+    </Card>
   )
 }

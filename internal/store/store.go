@@ -46,6 +46,10 @@ func (store *Store) migrate() error {
 			generated_at TEXT NOT NULL,
 			payload BLOB NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS resource_history (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			payload BLOB NOT NULL
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("migrate sqlite database: %w", err)
@@ -66,6 +70,37 @@ func (store *Store) Save(ctx context.Context, snapshot model.Snapshot) error {
 		return fmt.Errorf("save snapshot: %w", err)
 	}
 	return nil
+}
+
+func (store *Store) SaveResources(ctx context.Context, history []model.ResourceSample) error {
+	payload, err := json.Marshal(history)
+	if err != nil {
+		return fmt.Errorf("encode resource history: %w", err)
+	}
+	_, err = store.database.ExecContext(ctx, `
+		INSERT INTO resource_history (id, payload) VALUES (1, ?)
+		ON CONFLICT(id) DO UPDATE SET payload = excluded.payload
+	`, payload)
+	if err != nil {
+		return fmt.Errorf("save resource history: %w", err)
+	}
+	return nil
+}
+
+func (store *Store) LoadResources(ctx context.Context) ([]model.ResourceSample, error) {
+	var payload []byte
+	err := store.database.QueryRowContext(ctx, "SELECT payload FROM resource_history WHERE id = 1").Scan(&payload)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load resource history: %w", err)
+	}
+	var history []model.ResourceSample
+	if err := json.Unmarshal(payload, &history); err != nil {
+		return nil, fmt.Errorf("decode resource history: %w", err)
+	}
+	return history, nil
 }
 
 func (store *Store) Load(ctx context.Context) (model.Snapshot, error) {

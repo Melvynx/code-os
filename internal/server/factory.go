@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/melvynx/code-os/internal/config"
@@ -12,7 +13,7 @@ import (
 )
 
 func NewService(cfg config.Config, database *store.Store) *Service {
-	return &Service{
+	service := &Service{
 		Projects:     projects.NewScanner(),
 		ProjectRoots: cfg.ProjectsRoots,
 		Portly: portly.Client{
@@ -24,6 +25,12 @@ func NewService(cfg config.Config, database *store.Store) *Service {
 		Store:       database,
 		media:       make(map[string]string),
 	}
+	if database != nil {
+		if history, err := database.LoadResources(context.Background()); err == nil {
+			service.resources = history
+		}
+	}
+	return service
 }
 
 func DatabasePath(cfg config.Config) string {

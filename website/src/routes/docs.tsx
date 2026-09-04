@@ -94,7 +94,7 @@ chmod 600 dashboard-password media-bypass-key session-key`}</CodeBlock>
 
           <DocsSection id="command-center" title="Command center">
             <p>Opening the Code OS hostname routes directly to <code>/app/</code>. A signed-in or explicitly trusted connection sees the live dashboard; every other connection receives the HTML sign-in form. Public product documentation remains available at <code>/docs</code>.</p>
-            <p>The dashboard brings projects, every Git worktree, application state, Git changes, grouped screenshot evidence, and machine settings into one operational view. Settings can change project roots, Cloudflare fields, skills repository details, and credential-file locations. Secret values are write-only.</p>
+            <p>The dashboard brings projects, every Git worktree, application state, Git changes, grouped screenshot evidence, skills synchronization, environment status, and machine settings into one operational view. Skills sync shows whether <code>~/.agents</code> matches origin. Status verifies that screenshots and private files decode and render. Settings can change project roots, Cloudflare fields, skills repository details, and credential-file locations. Secret values are write-only.</p>
           </DocsSection>
 
           <DocsSection id="worktrees" title="Projects and worktrees">

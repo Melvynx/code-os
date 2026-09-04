@@ -23,9 +23,10 @@ type Service struct {
 	Screenshots  screenshots.Indexer
 	Store        *store.Store
 
-	mutex    sync.RWMutex
-	snapshot model.Snapshot
-	media    map[string]string
+	mutex     sync.RWMutex
+	snapshot  model.Snapshot
+	media     map[string]string
+	resources []model.ResourceSample
 }
 
 func (service *Service) Refresh(ctx context.Context) model.Snapshot {
@@ -61,12 +62,20 @@ func (service *Service) Refresh(ctx context.Context) model.Snapshot {
 	service.mutex.Lock()
 	service.snapshot = snapshot
 	service.media = media
+	service.resources = model.AppendResourceSample(service.resources, model.SampleResources(snapshot), model.ResourceHistoryRetention)
+	resources := service.resources
 	service.mutex.Unlock()
 
 	if service.Store != nil {
 		if err := service.Store.Save(ctx, snapshot); err != nil {
 			service.mutex.Lock()
 			service.snapshot.Warnings = append(service.snapshot.Warnings, fmt.Sprintf("persist snapshot: %v", err))
+			snapshot = service.snapshot
+			service.mutex.Unlock()
+		}
+		if err := service.Store.SaveResources(ctx, resources); err != nil {
+			service.mutex.Lock()
+			service.snapshot.Warnings = append(service.snapshot.Warnings, fmt.Sprintf("persist resource history: %v", err))
 			snapshot = service.snapshot
 			service.mutex.Unlock()
 		}
@@ -116,6 +125,12 @@ func (service *Service) TerminateAgent(id string) error {
 	service.snapshot.Agents = agents
 	service.mutex.Unlock()
 	return nil
+}
+
+func (service *Service) ResourceHistory() model.ResourceHistory {
+	service.mutex.RLock()
+	defer service.mutex.RUnlock()
+	return model.BuildResourceHistory(service.resources)
 }
 
 func (service *Service) Snapshot() model.Snapshot {

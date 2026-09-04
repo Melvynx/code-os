@@ -22,7 +22,7 @@ function GitPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <SectionHeading title="Git changes" description="A read-only view of work in progress across every Git worktree." />
       {worktrees.length ? <section aria-label="Modified worktrees" className="grid gap-4">{worktrees.map(({ project, worktree }) => <GitCard key={worktree.id} project={project} worktree={worktree} />)}</section> : <EmptyState title="No Git changes" description="Every matching worktree is clean." />}
     </div>

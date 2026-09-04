@@ -12,6 +12,7 @@ describe("dashboard formatters", () => {
   it("formats elapsed time", () => {
     const currentTime = Date.parse("2026-08-28T12:00:00Z")
     expect(formatRelativeTime("2026-08-28T11:58:00Z", currentTime)).toBe("2m ago")
+    expect(formatRelativeTime("2026-08-28T12:02:00Z", currentTime)).toBe("in 2m")
   })
 
   it("counts every visible Git change", () => {

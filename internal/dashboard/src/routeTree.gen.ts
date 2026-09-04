@@ -15,6 +15,8 @@ import { Route as GitRouteImport } from './routes/git'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ScreenshotsRouteImport } from './routes/screenshots'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SkillsSyncRouteImport } from './routes/skills-sync'
+import { Route as StatusRouteImport } from './routes/status'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +48,16 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SkillsSyncRoute = SkillsSyncRouteImport.update({
+  id: '/skills-sync',
+  path: '/skills-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +66,8 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ProjectsRoute
   '/screenshots': typeof ScreenshotsRoute
   '/settings': typeof SettingsRoute
+  '/skills-sync': typeof SkillsSyncRoute
+  '/status': typeof StatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +76,8 @@ export interface FileRoutesByTo {
   '/projects': typeof ProjectsRoute
   '/screenshots': typeof ScreenshotsRoute
   '/settings': typeof SettingsRoute
+  '/skills-sync': typeof SkillsSyncRoute
+  '/status': typeof StatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,14 +87,30 @@ export interface FileRoutesById {
   '/projects': typeof ProjectsRoute
   '/screenshots': typeof ScreenshotsRoute
   '/settings': typeof SettingsRoute
+  '/skills-sync': typeof SkillsSyncRoute
+  '/status': typeof StatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/applications' | '/git' | '/projects' | '/screenshots' | '/settings'
+    | '/'
+    | '/applications'
+    | '/git'
+    | '/projects'
+    | '/screenshots'
+    | '/settings'
+    | '/skills-sync'
+    | '/status'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/applications' | '/git' | '/projects' | '/screenshots' | '/settings'
+    | '/'
+    | '/applications'
+    | '/git'
+    | '/projects'
+    | '/screenshots'
+    | '/settings'
+    | '/skills-sync'
+    | '/status'
   id:
     | '__root__'
     | '/'
@@ -87,6 +119,8 @@ export interface FileRouteTypes {
     | '/projects'
     | '/screenshots'
     | '/settings'
+    | '/skills-sync'
+    | '/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -96,6 +130,8 @@ export interface RootRouteChildren {
   ProjectsRoute: typeof ProjectsRoute
   ScreenshotsRoute: typeof ScreenshotsRoute
   SettingsRoute: typeof SettingsRoute
+  SkillsSyncRoute: typeof SkillsSyncRoute
+  StatusRoute: typeof StatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -142,6 +178,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/skills-sync': {
+      id: '/skills-sync'
+      path: '/skills-sync'
+      fullPath: '/skills-sync'
+      preLoaderRoute: typeof SkillsSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -152,6 +202,8 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsRoute: ProjectsRoute,
   ScreenshotsRoute: ScreenshotsRoute,
   SettingsRoute: SettingsRoute,
+  SkillsSyncRoute: SkillsSyncRoute,
+  StatusRoute: StatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

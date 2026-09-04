@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const gitStateSchema = z.object({
+export const gitStateSchema = z.object({
   branch: z.string(),
   upstream: z.string().optional(),
   ahead: z.number().int().nonnegative(),

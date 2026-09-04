@@ -25,8 +25,10 @@ import (
 
 	"github.com/melvynx/code-os/internal/cloudflare"
 	"github.com/melvynx/code-os/internal/config"
+	"github.com/melvynx/code-os/internal/diagnostics"
 	"github.com/melvynx/code-os/internal/model"
 	"github.com/melvynx/code-os/internal/server"
+	"github.com/melvynx/code-os/internal/skills"
 	"github.com/melvynx/code-os/internal/store"
 )
 
@@ -304,57 +306,18 @@ func doctor(arguments []string) error {
 	if err != nil {
 		return err
 	}
-	type check struct {
-		label, detail string
-		ok, required  bool
-	}
-	checks := []check{
-		{"Configuration", *configPath, true, true},
-		{"Loopback dashboard", cfg.Address, isLoopbackAddress(cfg.Address), true},
-		{"Dashboard hostname", cfg.Cloudflare.DashboardHost, cfg.Cloudflare.DashboardHost != "", true},
-		{"Cloudflare Access policy", "must be enabled before publishing", cfg.Cloudflare.RequireAccess, true},
-	}
-	if cfg.Auth.PasswordFile != "" {
-		checks = append(checks, check{"Dashboard authentication", cfg.Auth.Username, isPrivateRegularFile(cfg.Auth.PasswordFile), true})
-	}
-	if cfg.Auth.BypassKeyFile != "" {
-		checks = append(checks, check{"Media bypass key", cfg.Auth.BypassKeyFile, isPrivateRegularFile(cfg.Auth.BypassKeyFile), true})
-	}
-	if cfg.Auth.SessionKeyFile != "" {
-		checks = append(checks, check{"Session signing key", cfg.Auth.SessionKeyFile, isPrivateRegularFile(cfg.Auth.SessionKeyFile), true})
-	}
-	if cfg.Auth.TrustedIPsFile != "" {
-		checks = append(checks, check{"Trusted IP storage", cfg.Auth.TrustedIPsFile, isPrivateRegularFile(cfg.Auth.TrustedIPsFile), true})
-	}
-	for _, root := range cfg.ProjectsRoots {
-		checks = append(checks, check{"Projects root", root, isDirectory(root), true})
-	}
-	checks = append(checks,
-		check{"Screenshot root", cfg.ScreenshotsRoot, isDirectory(cfg.ScreenshotsRoot), false},
-		check{"Portly", cfg.PortlyBinary, commandExists(cfg.PortlyBinary), true},
-		check{"Git", "git", commandExists("git"), true},
-	)
-	if runtime.GOOS == "linux" {
-		checks = append(checks,
-			check{"Code OS user service", "enabled", commandSucceeds("systemctl", "--user", "is-enabled", "code-os.service"), true},
-			check{"Code OS runtime", "active", commandSucceeds("systemctl", "--user", "is-active", "code-os.service"), true},
-			check{"Boot without login", "systemd linger enabled", lingerEnabled(), true},
-		)
-	}
-	if cfg.Cloudflare.TokenFile != "" {
-		checks = append(checks, check{"Cloudflare token file", cfg.Cloudflare.TokenFile, isRegularFile(cfg.Cloudflare.TokenFile), false})
-	}
+	report := diagnostics.Inspect(cfg, diagnostics.Options{ConfigPath: *configPath})
 	failed := false
-	for _, item := range checks {
+	for _, item := range report.Checks {
 		mark := "✓"
-		if !item.ok {
+		if item.Status == diagnostics.Warn {
 			mark = "!"
-			if item.required {
-				mark = "✗"
-				failed = true
-			}
 		}
-		fmt.Printf("%s %-24s %s\n", mark, item.label, item.detail)
+		if item.Status == diagnostics.Fail {
+			mark = "✗"
+			failed = true
+		}
+		fmt.Printf("%s %-24s %s\n", mark, item.Label, item.Detail)
 	}
 	if failed {
 		return errors.New("required checks failed")
@@ -468,79 +431,12 @@ func skillsSync(arguments []string) error {
 	if err != nil {
 		return err
 	}
-	if cfg.Skills.Repository == "" || cfg.Skills.Directory == "" || cfg.Skills.Branch == "" {
-		return errors.New("skills repository, directory, and branch must be configured")
-	}
-	if _, err := os.Stat(cfg.Skills.Directory); os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(cfg.Skills.Directory), 0o700); err != nil {
-			return fmt.Errorf("create skills parent directory: %w", err)
-		}
-		return runCommand("git", "clone", "--branch", cfg.Skills.Branch, "--single-branch", cfg.Skills.Repository, cfg.Skills.Directory)
-	}
-	if _, err := gitOutput(cfg.Skills.Directory, "rev-parse", "--is-inside-work-tree"); err != nil {
-		return fmt.Errorf("skills directory is not a Git repository: %w", err)
-	}
-	remote, err := gitOutput(cfg.Skills.Directory, "remote", "get-url", "origin")
-	if err != nil {
-		return errors.New("skills repository has no origin remote")
-	}
-	if strings.TrimSpace(remote) != cfg.Skills.Repository {
-		return fmt.Errorf("skills origin %q does not match configured repository", strings.TrimSpace(remote))
-	}
-	branch, err := gitOutput(cfg.Skills.Directory, "symbolic-ref", "--quiet", "--short", "HEAD")
-	if err != nil || strings.TrimSpace(branch) != cfg.Skills.Branch {
-		return fmt.Errorf("skills checkout must be on branch %q", cfg.Skills.Branch)
-	}
-	gitDirectory, err := gitOutput(cfg.Skills.Directory, "rev-parse", "--absolute-git-dir")
+	result, err := skills.Sync(cfg.Skills)
 	if err != nil {
 		return err
 	}
-	lockDirectory := filepath.Join(strings.TrimSpace(gitDirectory), "code-os-sync.lock")
-	if err := os.Mkdir(lockDirectory, 0o700); err != nil {
-		if os.IsExist(err) {
-			fmt.Println("Code OS skills sync: another sync is already running")
-			return nil
-		}
-		return fmt.Errorf("create skills sync lock: %w", err)
-	}
-	defer os.Remove(lockDirectory)
-	for _, marker := range []string{"rebase-merge", "rebase-apply", "MERGE_HEAD"} {
-		if _, err := os.Stat(filepath.Join(strings.TrimSpace(gitDirectory), marker)); err == nil {
-			return errors.New("resolve the existing Git operation before synchronizing skills")
-		}
-	}
-	if err := runGit(cfg.Skills.Directory, "diff", "--quiet", "--diff-filter=U"); err != nil {
-		return errors.New("resolve skills repository conflicts before synchronizing")
-	}
-	if err := runGit(cfg.Skills.Directory, "add", "-A"); err != nil {
-		return err
-	}
-	if err := runGit(cfg.Skills.Directory, "diff", "--cached", "--quiet"); err != nil {
-		hostname, _ := os.Hostname()
-		message := fmt.Sprintf("sync(%s): %s", hostname, time.Now().UTC().Format(time.RFC3339))
-		if err := runGit(cfg.Skills.Directory, "commit", "-m", message); err != nil {
-			return err
-		}
-	}
-	if err := runGit(cfg.Skills.Directory, "pull", "--rebase", "--autostash", "origin", cfg.Skills.Branch); err != nil {
-		return err
-	}
-	if err := runGit(cfg.Skills.Directory, "push", "origin", cfg.Skills.Branch); err != nil {
-		return err
-	}
-	fmt.Println("Code OS skills sync: repository is up to date")
+	fmt.Println(result.Message)
 	return nil
-}
-
-func gitOutput(directory string, arguments ...string) (string, error) {
-	arguments = append([]string{"-C", directory}, arguments...)
-	command := exec.Command("git", arguments...)
-	output, err := command.Output()
-	return string(output), err
-}
-
-func runGit(directory string, arguments ...string) error {
-	return runCommand("git", append([]string{"-C", directory}, arguments...)...)
 }
 
 func runCommand(name string, arguments ...string) error {
