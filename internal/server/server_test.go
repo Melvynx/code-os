@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,11 +55,39 @@ func TestPublicDocumentationStaysAvailableWithoutAuthentication(t *testing.T) {
 func TestAuthenticationFaviconIsPublic(t *testing.T) {
 	t.Parallel()
 	fixture := newAuthFixture(t)
-	request := httptest.NewRequest(http.MethodGet, "https://code-os.example/favicon.ico", nil)
-	response := httptest.NewRecorder()
-	fixture.handler.ServeHTTP(response, request)
-	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
-		t.Fatalf("favicon response = %d content-type %q", response.Code, response.Header().Get("Content-Type"))
+	for _, path := range []string{"/favicon.ico", "/favicon.svg"} {
+		request := httptest.NewRequest(http.MethodGet, "https://code-os.example"+path, nil)
+		response := httptest.NewRecorder()
+		fixture.handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
+			t.Fatalf("%s response = %d content-type %q", path, response.Code, response.Header().Get("Content-Type"))
+		}
+	}
+}
+
+func TestAuthenticationAssetsMatchDashboardTheme(t *testing.T) {
+	t.Parallel()
+	fixture := newAuthFixture(t)
+
+	login := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(login, httptest.NewRequest(http.MethodGet, "/login", nil))
+	body := login.Body.String()
+	for _, expected := range []string{`class="card"`, `for="username">Username<`, `for="password">Password<`, `class="button"`, `href="/favicon.svg"`} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("login page missing %s", expected)
+		}
+	}
+
+	styles := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(styles, httptest.NewRequest(http.MethodGet, "/login.css", nil))
+	if !strings.Contains(styles.Body.String(), `--font-sans: "Geist Variable"`) || !strings.Contains(styles.Body.String(), `url("geist-latin.woff2")`) {
+		t.Fatalf("login stylesheet missing dashboard tokens")
+	}
+
+	font := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(font, httptest.NewRequest(http.MethodGet, "/geist-latin.woff2", nil))
+	if font.Code != http.StatusOK || font.Header().Get("Content-Type") != "font/woff2" || font.Body.Len() == 0 {
+		t.Fatalf("geist font response = %d content-type %q bytes %d", font.Code, font.Header().Get("Content-Type"), font.Body.Len())
 	}
 }
 
@@ -312,7 +341,7 @@ func TestAuthenticatedClientCanTrustAndRevokeExactIP(t *testing.T) {
 	pageRequest.AddCookie(sessionCookie)
 	pageResponse := httptest.NewRecorder()
 	fixture.handler.ServeHTTP(pageResponse, pageRequest)
-	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), "203.0.113.7") {
+	if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), "203.0.113.7") || !strings.Contains(pageResponse.Body.String(), `class="card"`) || !strings.Contains(pageResponse.Body.String(), "Continue without trusting") || !strings.Contains(pageResponse.Body.String(), `name="csrf"`) {
 		t.Fatalf("trust page = %d %q", pageResponse.Code, pageResponse.Body.String())
 	}
 
@@ -356,6 +385,44 @@ func TestAuthenticatedClientCanTrustAndRevokeExactIP(t *testing.T) {
 	fixture.handler.ServeHTTP(revokeResponse, revokeRequest)
 	if revokeResponse.Code != http.StatusOK || !strings.Contains(revokeResponse.Body.String(), `"trusted":false`) {
 		t.Fatalf("revoke response = %d %q", revokeResponse.Code, revokeResponse.Body.String())
+	}
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusUnauthorized)
+}
+
+func TestTrustIPFormPostSucceedsWithoutOriginWhenCSRFIsPresent(t *testing.T) {
+	t.Parallel()
+	fixture := newTrustedAuthFixture(t)
+	cookie := loginFixtureForIP(t, fixture, "203.0.113.7")
+	page := getTrustIPPage(t, fixture, cookie, "203.0.113.7")
+	form := url.Values{"next": {"/app/"}, "csrf": {trustPageCSRF(t, page)}}.Encode()
+
+	request := httptest.NewRequest(http.MethodPost, "https://code-os-demo1.mlvcdn.com/auth/trust-ip", strings.NewReader(form))
+	request.Host = "code-os-demo1.mlvcdn.com"
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/app/" {
+		t.Fatalf("trust form post = %d location %q body %q", response.Code, response.Header().Get("Location"), response.Body.String())
+	}
+	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusOK)
+}
+
+func TestTrustIPFormPostWithoutOriginOrCSRFIsRejected(t *testing.T) {
+	t.Parallel()
+	fixture := newTrustedAuthFixture(t)
+	cookie := loginFixtureForIP(t, fixture, "203.0.113.7")
+
+	request := httptest.NewRequest(http.MethodPost, "https://code-os-demo1.mlvcdn.com/auth/trust-ip", strings.NewReader("next=%2Fapp%2F"))
+	request.Host = "code-os-demo1.mlvcdn.com"
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "Same-origin request required") {
+		t.Fatalf("stripped-header trust without csrf = %d %q", response.Code, response.Body.String())
 	}
 	assertAPIStatusForIP(t, fixture.handler, "203.0.113.7", http.StatusUnauthorized)
 }
@@ -497,6 +564,39 @@ func loginFixtureForIP(t *testing.T, fixture authFixture, address string) *http.
 		t.Fatalf("login failed with status %d", response.Code)
 	}
 	return response.Result().Cookies()[0]
+}
+
+func getTrustIPPage(t *testing.T, fixture authFixture, cookie *http.Cookie, address string) string {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodGet, "https://code-os-demo1.mlvcdn.com/trust-ip?next=%2Fapp%2F", nil)
+	request.Host = "code-os-demo1.mlvcdn.com"
+	request.Header.Set("CF-Connecting-IP", address)
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	fixture.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("trust page = %d %q", response.Code, response.Body.String())
+	}
+	return response.Body.String()
+}
+
+func trustPageCSRF(t *testing.T, body string) string {
+	t.Helper()
+	const marker = `name="csrf" value="`
+	start := strings.Index(body, marker)
+	if start < 0 {
+		t.Fatalf("csrf field missing from trust page: %s", body)
+	}
+	rest := body[start+len(marker):]
+	end := strings.IndexByte(rest, '"')
+	if end < 0 {
+		t.Fatal("csrf value not terminated")
+	}
+	token := rest[:end]
+	if token == "" {
+		t.Fatal("csrf token is empty")
+	}
+	return token
 }
 
 func assertAPIStatusForIP(t *testing.T, handler http.Handler, address string, expected int) {

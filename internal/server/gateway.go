@@ -37,6 +37,8 @@ func (server HTTPServer) gatewayRoutes(auth *authenticator, protected http.Handl
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /_code-os/login", auth.gatewayLoginPage)
 	mux.HandleFunc("GET /_code-os/login.css", auth.loginStyles)
+	mux.HandleFunc("GET /_code-os/geist-latin.woff2", auth.loginGeistSans)
+	mux.HandleFunc("GET /_code-os/geist-mono-latin.woff2", auth.loginGeistMono)
 	mux.HandleFunc("GET /_code-os/favicon.svg", auth.loginFavicon)
 	mux.HandleFunc("POST /_code-os/auth/login", auth.gatewayLogin)
 	mux.HandleFunc("POST /_code-os/auth/logout", auth.gatewayLogout)

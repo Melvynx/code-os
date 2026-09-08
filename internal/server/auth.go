@@ -35,6 +35,8 @@ type authenticator struct {
 	templates       *template.Template
 	loginStylesheet []byte
 	favicon         []byte
+	geistSans       []byte
+	geistMono       []byte
 	trustedIPs      *trustedIPStore
 	attemptsMutex   sync.Mutex
 	attempts        map[string]loginAttempt
@@ -75,21 +77,21 @@ type authSurface struct {
 }
 
 var dashboardAuthSurface = authSurface{
-	CookieName: sessionCookieName, LoginPath: "/login", StylesheetPath: "/login.css?v=black-grid-2", FaviconPath: "/favicon.svg",
+	CookieName: sessionCookieName, LoginPath: "/login", StylesheetPath: "/login.css?v=shadcn-1", FaviconPath: "/favicon.svg",
 	LoginAction: "/auth/login", LogoutPath: "/auth/logout", TrustPath: "/trust-ip", TrustAction: "/auth/trust-ip", PageTitle: "Sign in — Code OS",
 	Heading: "Sign in to Code OS", Description: "Use the credentials configured on this environment.",
 	Context: "Private development environment", SameSite: http.SameSiteStrictMode, APIsUseJSON401: true,
 }
 
 var gatewayAuthSurface = authSurface{
-	CookieName: gatewaySessionCookieName, LoginPath: "/_code-os/login", StylesheetPath: "/_code-os/login.css?v=black-grid-2", FaviconPath: "/_code-os/favicon.svg",
+	CookieName: gatewaySessionCookieName, LoginPath: "/_code-os/login", StylesheetPath: "/_code-os/login.css?v=shadcn-1", FaviconPath: "/_code-os/favicon.svg",
 	LoginAction: "/_code-os/auth/login", LogoutPath: "/_code-os/auth/logout", TrustPath: "/_code-os/trust-ip", TrustAction: "/_code-os/auth/trust-ip", PageTitle: "Unlock application — Code OS",
 	Heading: "Unlock development app", Description: "Authenticate before opening this private development port.",
 	Context: "Protected by Code OS", SameSite: http.SameSiteLaxMode,
 }
 
 func newAuthenticator(assets fs.FS, username, password, bypassKey, trustedIPsFile string, sessionKey []byte) (*authenticator, error) {
-	templates, err := template.ParseFS(assets, "login.html", "trust-ip.html")
+	templates, err := template.ParseFS(assets, "auth-chrome.html", "login.html", "trust-ip.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse login page: %w", err)
 	}
@@ -101,6 +103,14 @@ func newAuthenticator(assets fs.FS, username, password, bypassKey, trustedIPsFil
 	if err != nil {
 		return nil, fmt.Errorf("read login favicon: %w", err)
 	}
+	geistSans, err := fs.ReadFile(assets, "geist-latin.woff2")
+	if err != nil {
+		return nil, fmt.Errorf("read Geist sans: %w", err)
+	}
+	geistMono, err := fs.ReadFile(assets, "geist-mono-latin.woff2")
+	if err != nil {
+		return nil, fmt.Errorf("read Geist mono: %w", err)
+	}
 	if len(sessionKey) < 32 {
 		return nil, fmt.Errorf("session signing key must contain at least 32 bytes")
 	}
@@ -110,7 +120,8 @@ func newAuthenticator(assets fs.FS, username, password, bypassKey, trustedIPsFil
 	}
 	return &authenticator{
 		username: username, password: password, bypassKey: bypassKey,
-		sessionKey: append([]byte(nil), sessionKey...), templates: templates, loginStylesheet: loginStylesheet, favicon: favicon, trustedIPs: trustedIPs,
+		sessionKey: append([]byte(nil), sessionKey...), templates: templates, loginStylesheet: loginStylesheet, favicon: favicon,
+		geistSans: geistSans, geistMono: geistMono, trustedIPs: trustedIPs,
 		attempts: make(map[string]loginAttempt),
 	}, nil
 }
@@ -191,15 +202,25 @@ func (auth *authenticator) loginPageFor(response http.ResponseWriter, request *h
 }
 
 func (auth *authenticator) loginStyles(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/css; charset=utf-8")
-	response.Header().Set("Cache-Control", "no-store")
-	_, _ = response.Write(auth.loginStylesheet)
+	auth.writeAsset(response, "text/css; charset=utf-8", "no-store", auth.loginStylesheet)
 }
 
 func (auth *authenticator) loginFavicon(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "image/svg+xml")
-	response.Header().Set("Cache-Control", "private, max-age=86400")
-	_, _ = response.Write(auth.favicon)
+	auth.writeAsset(response, "image/svg+xml", "private, max-age=86400", auth.favicon)
+}
+
+func (auth *authenticator) loginGeistSans(response http.ResponseWriter, _ *http.Request) {
+	auth.writeAsset(response, "font/woff2", "private, max-age=86400", auth.geistSans)
+}
+
+func (auth *authenticator) loginGeistMono(response http.ResponseWriter, _ *http.Request) {
+	auth.writeAsset(response, "font/woff2", "private, max-age=86400", auth.geistMono)
+}
+
+func (auth *authenticator) writeAsset(response http.ResponseWriter, contentType, cacheControl string, body []byte) {
+	response.Header().Set("Content-Type", contentType)
+	response.Header().Set("Cache-Control", cacheControl)
+	_, _ = response.Write(body)
 }
 
 func (auth *authenticator) login(response http.ResponseWriter, request *http.Request) {
@@ -369,6 +390,25 @@ func (auth *authenticator) sign(value string) string {
 	mac := hmac.New(sha256.New, auth.sessionKey)
 	_, _ = mac.Write([]byte(value))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+const trustIPCSRFPurpose = "trust-ip"
+
+func (auth *authenticator) formCSRFToken(sessionValue, purpose string) string {
+	return auth.sign(purpose + "\n" + sessionValue)
+}
+
+func (auth *authenticator) validFormCSRF(request *http.Request, cookieName, purpose string) bool {
+	cookie, err := request.Cookie(cookieName)
+	if err != nil || cookie.Value == "" {
+		return false
+	}
+	provided := request.FormValue("csrf")
+	if provided == "" {
+		return false
+	}
+	expected := auth.formCSRFToken(cookie.Value, purpose)
+	return subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) == 1
 }
 
 func safeNextPath(candidate string) string {

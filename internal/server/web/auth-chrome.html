@@ -1,0 +1,34 @@
+{{define "auth-open"}}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{{.PageTitle}}</title>
+    <link rel="icon" href="{{.FaviconPath}}" type="image/svg+xml" />
+    <link rel="stylesheet" href="{{.StylesheetPath}}" />
+  </head>
+  <body>
+    <main class="auth-shell">
+      <div class="auth-brand">
+        <span class="auth-mark" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 2h10" />
+            <path d="M5 6h14" />
+            <rect width="18" height="12" x="3" y="10" rx="2" />
+          </svg>
+        </span>
+        <span class="auth-brand-copy">
+          <span class="auth-brand-name">Code OS</span>
+          <span class="auth-brand-tag">{{.Context}}</span>
+        </span>
+      </div>
+{{end}}
+
+{{define "auth-close"}}
+    </main>
+  </body>
+</html>
+{{end}}

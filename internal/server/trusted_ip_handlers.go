@@ -13,9 +13,11 @@ type trustedIPStatus struct {
 }
 
 type trustIPPageData struct {
+	PageTitle      string
 	StylesheetPath string
 	FaviconPath    string
 	FormAction     string
+	CSRF           string
 	Next           string
 	ClientIP       string
 	Context        string
@@ -48,10 +50,16 @@ func (auth *authenticator) trustIPPageFor(response http.ResponseWriter, request 
 		http.Redirect(response, request, nextPath, http.StatusSeeOther)
 		return
 	}
+	cookie, err := request.Cookie(surface.CookieName)
+	if err != nil {
+		http.Redirect(response, request, surface.LoginPath+"?next="+url.QueryEscape(nextPath), http.StatusSeeOther)
+		return
+	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "no-store")
 	data := trustIPPageData{
-		StylesheetPath: surface.StylesheetPath, FaviconPath: surface.FaviconPath, FormAction: surface.TrustAction,
+		PageTitle: "Trust this IP — Code OS", StylesheetPath: surface.StylesheetPath, FaviconPath: surface.FaviconPath,
+		FormAction: surface.TrustAction, CSRF: auth.formCSRFToken(cookie.Value, trustIPCSRFPurpose),
 		Next: nextPath, ClientIP: address.String(), Context: surface.Context,
 	}
 	if err := auth.templates.ExecuteTemplate(response, "trust-ip.html", data); err != nil {
@@ -128,13 +136,13 @@ func (auth *authenticator) trustIPFor(response http.ResponseWriter, request *htt
 		http.Error(response, "Authentication required", http.StatusUnauthorized)
 		return
 	}
-	if !isSameOrigin(request) {
-		http.Error(response, "Same-origin request required", http.StatusForbidden)
-		return
-	}
 	request.Body = http.MaxBytesReader(response, request.Body, 8<<10)
 	if err := request.ParseForm(); err != nil {
 		http.Error(response, "Invalid form", http.StatusBadRequest)
+		return
+	}
+	if foreignOrigin(request) || (!isSameOrigin(request) && !auth.validFormCSRF(request, surface.CookieName, trustIPCSRFPurpose)) {
+		http.Error(response, "Same-origin request required", http.StatusForbidden)
 		return
 	}
 	nextPath := safeNextPath(request.FormValue("next"))

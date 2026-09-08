@@ -1,51 +1,52 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>{{.PageTitle}}</title>
-    <link rel="icon" href="{{.FaviconPath}}" type="image/svg+xml" />
-    <link rel="stylesheet" href="{{.StylesheetPath}}" />
-  </head>
-  <body>
-    <main class="shell" aria-labelledby="login-title">
-      <header class="masthead">
-        <p class="wordmark">CODE OS</p>
-        <p>Projects, processes, Git state, and visual evidence</p>
-      </header>
+{{template "auth-open" .}}
+      <section class="card" aria-labelledby="login-title">
+        <header class="card-header">
+          <h1 id="login-title" class="card-title">{{.Heading}}</h1>
+          <p class="card-description">{{.Description}}</p>
+        </header>
 
-      <div class="context" aria-hidden="true">{{.Context}} <span>→</span></div>
+        <div class="card-content">
+          {{if .InvalidCredentials}}
+            <div id="login-error" class="alert alert-destructive" role="alert">
+              <div class="alert-title">Sign-in failed</div>
+              <div class="alert-description">The username or password is incorrect.</div>
+            </div>
+          {{end}}
 
-      <section class="login-section">
-        <p class="section-label">AUTHENTICATION</p>
-        <div class="intro">
-          <h1 id="login-title">{{.Heading}}</h1>
-          <p>{{.Description}}</p>
+          <form method="post" action="{{.FormAction}}">
+            <input type="hidden" name="next" value="{{.Next}}" />
+            <div class="field">
+              <label class="field-label" for="username">Username</label>
+              <input
+                id="username"
+                class="input"
+                name="username"
+                type="text"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
+                required
+                autofocus
+                {{if .InvalidCredentials}}aria-invalid="true" aria-describedby="login-error"{{end}}
+              />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="password">Password</label>
+              <input
+                id="password"
+                class="input"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                {{if .InvalidCredentials}}aria-invalid="true" aria-describedby="login-error"{{end}}
+              />
+            </div>
+            <button class="button" type="submit">Sign in</button>
+          </form>
         </div>
 
-        {{if .InvalidCredentials}}
-          <div class="error" role="alert">The username or password is incorrect.</div>
-        {{end}}
-
-        <form method="post" action="{{.FormAction}}">
-          <input type="hidden" name="next" value="{{.Next}}" />
-          <div class="field">
-            <label for="username">USERNAME</label>
-            <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus />
-          </div>
-
-          <div class="field">
-            <label for="password">PASSWORD</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required />
-          </div>
-
-          <button type="submit"><span>Sign in</span><span aria-hidden="true">→</span></button>
-        </form>
-
-        <footer>SESSION / 12H / HTTPONLY / SAME-SITE STRICT</footer>
+        <footer class="card-footer">Session lasts 12 hours. HttpOnly, SameSite=Strict.</footer>
       </section>
-    </main>
-  </body>
-</html>
+{{template "auth-close" .}}
