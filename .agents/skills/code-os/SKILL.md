@@ -1,13 +1,13 @@
 ---
 name: code-os
-description: Operate and verify Code OS dashboards, projects, Portly apps, Git state, screenshots, login sessions, and media bypass URLs on local or VPS development environments.
+description: Operate an already-running Code OS dashboard, Portly apps, Git, screenshots, and media ?bp= URLs. Do not use for VPS provisioning, SSH keys, Hostinger, or Cloudflare token creation.
 ---
 
 # Code OS
 
 Use the local Code OS CLI and configuration as the source of truth.
 
-Provisioning a new VPS is a different skill: read `.agents/skills/code-vps/setup/SKILL.md`.
+Provisioning a new VPS is a different skill: read `.agents/skills/code-vps/SKILL.md` only.
 
 ## Inspect
 
