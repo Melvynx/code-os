@@ -7,6 +7,8 @@ description: Operate and verify Code OS dashboards, projects, Portly apps, Git s
 
 Use the local Code OS CLI and configuration as the source of truth.
 
+Provisioning a new VPS is a different skill: read `.agents/skills/code-vps/setup/SKILL.md`.
+
 ## Inspect
 
 1. Run `code-os doctor`.

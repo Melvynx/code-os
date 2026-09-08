@@ -71,7 +71,7 @@ go build -o code-os ./cmd/code-os`}</CodeBlock>
 code-os doctor
 code-os service install`}</CodeBlock>
             <p>On Linux, <code>service install</code> starts Code OS immediately, enables it after every reboot, and installs the skills-sync timer when a repository is configured. Use <code>code-os dashboard</code> only for an interactive foreground run.</p>
-            <p>Generate dedicated secrets instead of reusing a personal password:</p>
+            <p>Generate dedicated secrets instead of reusing a personal password. Sign-in uses the Code OS HTML page at <code>/login</code>, not Cloudflare Access and not HTTP Basic Auth:</p>
             <CodeBlock>{`openssl rand -base64 32 > dashboard-password
 openssl rand -hex 32 > media-bypass-key
 openssl rand -hex 32 > session-key
@@ -122,9 +122,13 @@ chmod 600 dashboard-password media-bypass-key session-key`}</CodeBlock>
           </DocsSection>
 
           <DocsSection id="cloudflare" title="Cloudflare Tunnel">
-            <p>Keep Code OS bound to <code>127.0.0.1</code>, then route the main hostname and each <code>portNNNN</code> hostname to Code OS through Cloudflare Tunnel. The gateway requires the Code OS session before proxying a healthy Portly application.</p>
+            <p>Cloudflare is TLS and ingress only. Authentication is the Code OS login page, the password file, the optional trusted IP, and a separate media bypass key. Do not put Cloudflare Access or Zero Trust in front of the dashboard.</p>
+            <p>Create the API token from this prefilled URL (Account Settings Read, Cloudflare Tunnel Edit, DNS Edit, Zone Read), then store it in a mode-<code>0600</code> file referenced by <code>cloudflare.tokenFile</code>:</p>
+            <CodeBlock>{`https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22argotunnel%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Code%20OS`}</CodeBlock>
+            <p>That API token is not the tunnel run token. <code>cloudflared</code> uses a second <code>eyJ…</code> secret from tunnel create, typically <code>/etc/cloudflared/code-os.token</code>.</p>
+            <p>Keep Code OS bound to <code>127.0.0.1</code>. Route the dashboard hostname and each <code>portNNNN</code> hostname to <code>http://127.0.0.1:7890</code>. The gateway requires the Code OS session before proxying a healthy Portly application.</p>
             <CodeBlock>{`code-os dashboard
-# Tunnel origin example
+# Tunnel origin
 http://127.0.0.1:7890`}</CodeBlock>
           </DocsSection>
 
@@ -145,8 +149,8 @@ loginctl show-user "$USER" -p Linger`}</CodeBlock>
               <li>A stable 256-bit signing key keeps sessions valid across safe restarts.</li>
               <li>After signing in, Settings shows the detected exact IP and a <b>Trust this IP</b> button. The same control can revoke it immediately.</li>
               <li>The JSON API requires a valid session or an IP that you explicitly trusted after signing in.</li>
-              <li>The media bypass is separately generated and scoped to image reads.</li>
-              <li>Cloudflare provides the public TLS boundary.</li>
+              <li>The media bypass is separately generated and scoped to image reads via <code>?bp=</code>.</li>
+              <li>Cloudflare Tunnel provides the public TLS boundary. Origin authentication is the custom login page, not Cloudflare Access.</li>
             </ul>
           </DocsSection>
 
