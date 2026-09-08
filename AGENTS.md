@@ -1,5 +1,10 @@
 # Code OS
 
+## Agent skills
+
+- **`$code-vps-setup`** (`.agents/skills/code-vps-setup/SKILL.md`) is the only first-time VPS install skill. Use it for Hostinger, SSH keys, the Cloudflare token URL, tunnel, origin login, and `?bp=`.
+- **`$code-os`** (`.agents/skills/code-os/SKILL.md`) operates an already-running dashboard. Never load it to provision a machine.
+
 ## Product contract
 
 - Code OS is a cross-platform command center for local and remote development environments.

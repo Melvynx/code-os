@@ -21,6 +21,11 @@ Austere, technical, trustworthy, and fast. The product should feel like an opera
 5. Make keyboard navigation, visible focus, reduced motion, and WCAG 2.2 AA contrast standard.
 6. Make destructive controls explicit, confirmed, and limited to the exact process shown.
 
+## Agent skills
+
+- `$code-vps-setup` (`.agents/skills/code-vps-setup/SKILL.md`) is the only provisioning path for a new VPS.
+- `$code-os` operates an already-running environment. It must not be used to create SSH keys, Cloudflare tokens, or tunnels.
+
 ## Current capabilities
 
 - The public root opens the command center; product documentation remains available at `/docs`.

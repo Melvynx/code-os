@@ -7,7 +7,7 @@ description: Operate an already-running Code OS dashboard, Portly apps, Git, scr
 
 Use the local Code OS CLI and configuration as the source of truth.
 
-Provisioning a new VPS is a different skill: read `.agents/skills/code-vps/SKILL.md` only.
+Provisioning a new VPS is `$code-vps-setup` only: `.agents/skills/code-vps-setup/SKILL.md`. Never load this skill for SSH keys, Hostinger, or Cloudflare tokens.
 
 ## Inspect
 

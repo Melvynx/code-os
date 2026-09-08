@@ -1,11 +1,11 @@
 ---
-name: code-vps
-description: Provision a new Code OS VPS. Use for Hostinger, SSH keys, Cloudflare token URL, tunnel install, first-time code-os setup. Do not use for operating an existing dashboard.
+name: code-vps-setup
+description: code-vps-setup provisions a new Code OS VPS. Use $code-vps-setup for Hostinger, SSH keys, Cloudflare token URL, tunnel, first install. Never load the code-os skill to provision.
 ---
 
-# Code OS VPS setup
+# $code-vps-setup
 
-This is the only provisioning skill. Do not load `code-os`, do not SSH-find other SKILL.md files, do not invent a second Cloudflare token flow.
+This is the only provisioning skill. Invoke it as `$code-vps-setup`. Do not load `code-os`, do not SSH-find other SKILL.md files, do not invent a second Cloudflare token flow.
 
 Provision a Linux VPS so Code OS listens on loopback, Cloudflare Tunnel is TLS only, and origin auth is the custom login page plus a media bypass key.
 
