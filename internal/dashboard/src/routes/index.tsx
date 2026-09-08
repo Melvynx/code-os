@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item"
 import { useDashboardSearch } from "@/contexts/search-context"
+import { applicationMatchesQuery, sortApplications } from "@/lib/applications"
 import { getGitChangeCount, matchesQuery } from "@/lib/format"
 import { getAllWorktrees, getDirtyWorktrees } from "@/lib/worktrees"
 
@@ -28,7 +29,9 @@ function OverviewPage() {
   const { projects, applications, screenshots, warnings } = snapshotQuery.data
   const worktrees = getAllWorktrees(projects)
   const dirtyWorktrees = getDirtyWorktrees(projects)
-  const visibleApps = applications.filter((application) => matchesQuery(query, [application.name, application.projectName, application.command, application.port]))
+  const visibleApps = sortApplications(applications.filter((application) =>
+    (query || application.state === "running") && applicationMatchesQuery(application, query),
+  ))
   const visibleChanges = dirtyWorktrees.filter(({ project, worktree }) => matchesQuery(query, [project.name, worktree.path, worktree.git.branch]))
   const visibleScreenshots = screenshots.filter((screenshot) => matchesQuery(query, [screenshot.name, screenshot.project, screenshot.group]))
   const metrics = [

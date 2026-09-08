@@ -37,13 +37,14 @@ describe("ResourceUsage", () => {
     )
 
     expect(screen.getByText("Codex agent")).toBeInTheDocument()
-    expect(screen.getByText("Demo / web")).toBeInTheDocument()
+    expect(screen.getByText("Demo")).toBeInTheDocument()
+    expect(screen.getByText("Web · PID 120")).toBeInTheDocument()
     expect(screen.getByRole("progressbar", { name: "CPU: 28.0%" })).toBeInTheDocument()
     const killButtons = screen.getAllByRole("button", { name: "Kill" })
     expect(killButtons).toHaveLength(2)
 
-    fireEvent.click(killButtons[1]!)
-    expect(screen.getByRole("alertdialog", { name: "Kill Demo / web?" })).toBeInTheDocument()
+    fireEvent.click(killButtons[0]!)
+    expect(screen.getByRole("alertdialog", { name: "Kill Demo Web?" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Confirm kill" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument()
   })

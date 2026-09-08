@@ -2,8 +2,8 @@ import type { SkillsStatus } from "@/api/status"
 
 export const SKILLS_STATE_LABELS = {
   synced: "Synced",
-  dirty: "Pending local changes",
-  ahead: "Ahead of origin",
+  dirty: "Local unpublished changes",
+  ahead: "Local commits unpublished",
   behind: "Behind origin",
   diverged: "Diverged from origin",
   locked: "Sync in progress",

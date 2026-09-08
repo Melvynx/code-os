@@ -150,6 +150,10 @@ func externalProtocol(request *http.Request) string {
 	if request.TLS != nil {
 		return "https"
 	}
+	visitor := strings.TrimSpace(request.Header.Get("CF-Visitor"))
+	if strings.Contains(visitor, `"scheme":"https"`) {
+		return "https"
+	}
 	return "http"
 }
 

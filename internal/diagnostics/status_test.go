@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/melvynx/code-os/internal/agents"
 	"github.com/melvynx/code-os/internal/config"
 	"github.com/melvynx/code-os/internal/skills"
 )
@@ -51,6 +52,9 @@ func TestInspectReportsDecodableScreenshotPipeline(t *testing.T) {
 	if statusOf(report, "decodable-images") != Pass || statusOf(report, "media-bypass") != Pass {
 		t.Fatalf("checks = %+v", report.Checks)
 	}
+	if statusOf(report, "access-policy") != "" {
+		t.Fatal("doctor must not require Cloudflare Access")
+	}
 }
 
 func TestInspectFlagsEmptyAndUndecodableImages(t *testing.T) {
@@ -74,6 +78,55 @@ func TestInspectFlagsEmptyAndUndecodableImages(t *testing.T) {
 	}
 	if statusOf(report, "decodable-images") != Fail {
 		t.Fatalf("decodable check = %s", statusOf(report, "decodable-images"))
+	}
+}
+
+func TestInspectReportsPortlyAgentSetup(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	cfg := config.Config{
+		Address:         "127.0.0.1:7890",
+		ProjectsRoots:   []string{home},
+		ScreenshotsRoot: home,
+		FilesRoot:       home,
+		PortlyBinary:    "git",
+		Skills:          config.Skills{Directory: filepath.Join(home, ".agents")},
+	}
+	missing := Inspect(cfg, Options{Home: home, Skills: skills.Inspector{RunSystemd: missingSystemd}})
+	if statusOf(missing, "portly-skill") != Warn || statusOf(missing, "portly-rules") != Warn {
+		t.Fatalf("missing setup = skill:%s rules:%s", statusOf(missing, "portly-skill"), statusOf(missing, "portly-rules"))
+	}
+	if _, err := agents.InstallAt(home, cfg.Skills.Directory); err != nil {
+		t.Fatal(err)
+	}
+	cfg.PublicPortHost = "port{port}.example.com"
+	installed := Inspect(cfg, Options{Home: home, Skills: skills.Inspector{RunSystemd: missingSystemd}})
+	if statusOf(installed, "portly-skill") != Pass || statusOf(installed, "portly-rules") != Pass {
+		t.Fatalf("installed setup = skill:%s rules:%s", statusOf(installed, "portly-skill"), statusOf(installed, "portly-rules"))
+	}
+	if statusOf(installed, "public-port-host") != Pass || statusOf(installed, "remote-webview-skill") != Pass || statusOf(installed, "screenshot-skill") != Pass {
+		t.Fatalf("port/screenshot setup = host:%s webview:%s verify:%s", statusOf(installed, "public-port-host"), statusOf(installed, "remote-webview-skill"), statusOf(installed, "screenshot-skill"))
+	}
+}
+
+func TestInspectRejectsEphemeralPortlyAndReportsPrivateModes(t *testing.T) {
+	t.Parallel()
+	files := t.TempDir()
+	if err := os.Chmod(files, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	report := Inspect(config.Config{
+		Address:         "127.0.0.1:7890",
+		ProjectsRoots:   []string{t.TempDir()},
+		ScreenshotsRoot: files,
+		FilesRoot:       files,
+		PortlyBinary:    "/root/.cleanup-code-os-test/portly",
+	}, Options{Skills: skills.Inspector{RunSystemd: missingSystemd}})
+	if statusOf(report, "portly") != Fail {
+		t.Fatalf("portly = %s, want fail for ephemeral path", statusOf(report, "portly"))
+	}
+	if statusOf(report, "files-privacy") != Pass || statusOf(report, "screenshots-privacy") != Pass {
+		t.Fatalf("privacy = files:%s screenshots:%s", statusOf(report, "files-privacy"), statusOf(report, "screenshots-privacy"))
 	}
 }
 

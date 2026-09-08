@@ -56,6 +56,20 @@ func TestValidateRejectsBypassWithoutDashboardAuth(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsWildcardPublicPortHost(t *testing.T) {
+	t.Parallel()
+	cfg := Config{
+		Version: 1, EnvironmentName: "host", EnvironmentType: "remote",
+		Address: "127.0.0.1:7890", ProjectsRoots: []string{"/tmp/projects"},
+		FilesRoot: "/tmp/files", DataDir: "/tmp/data", PortlyBinary: "portly",
+		PublicPortHost: "*.example.com",
+		Auth:           Auth{Username: "code-os", PasswordFile: "/tmp/password", SessionKeyFile: "/tmp/session"},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate() error = nil, want wildcard publicPortHost error")
+	}
+}
+
 func TestValidateRejectsTrustedIPsWithoutDashboardAuth(t *testing.T) {
 	t.Parallel()
 	cfg := Config{

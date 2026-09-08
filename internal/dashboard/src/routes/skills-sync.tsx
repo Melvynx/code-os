@@ -44,6 +44,11 @@ function SkillsSyncPage() {
               <Badge variant={tone}>{status.synced ? "Origin match" : "Needs attention"}</Badge>
             </div>
             <CardDescription className="mt-3 max-w-2xl text-sm leading-relaxed">{status.message}</CardDescription>
+            {status.state === "dirty" || status.state === "ahead" ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Timer sync tracks <code>origin/{status.branch || "main"}</code>. Local edits stay unpublished until Sync now.
+              </p>
+            ) : null}
             <p className="mt-2 font-mono text-xs text-muted-foreground">
               {status.lastSyncAt ? `Last sync ${formatRelativeTime(status.lastSyncAt)}` : "No sync commit yet"}
               {status.nextTimerAt ? ` · next timer ${formatRelativeTime(status.nextTimerAt)}` : ""}
@@ -88,7 +93,7 @@ function SkillsSyncPage() {
       </section>
 
       <section>
-        <SectionHeading title="Git drift" description="Read-only view of the configured ~/.agents checkout. Sync commits local changes, rebases, and pushes." />
+        <SectionHeading title="Git drift" description="Timer sync tracks origin of the configured branch. Local dirty or ahead commits stay unpublished until Sync now." />
         <dl className="mt-5 grid grid-cols-2 divide-x border sm:grid-cols-5">
           {([
             ["Ahead", status.git.ahead, "text-git-info"],

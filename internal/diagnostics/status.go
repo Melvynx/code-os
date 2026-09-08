@@ -17,7 +17,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/melvynx/code-os/internal/agents"
 	"github.com/melvynx/code-os/internal/config"
+	"github.com/melvynx/code-os/internal/installbin"
+	"github.com/melvynx/code-os/internal/portly"
 	"github.com/melvynx/code-os/internal/screenshots"
 	"github.com/melvynx/code-os/internal/skills"
 )
@@ -80,6 +83,7 @@ type Report struct {
 type Options struct {
 	ConfigPath string
 	Skills     skills.Inspector
+	Home       string
 }
 
 func Inspect(cfg config.Config, options Options) Report {
@@ -95,7 +99,7 @@ func Inspect(cfg config.Config, options Options) Report {
 	report.Checks = append(report.Checks,
 		check("loopback", "environment", "Loopback dashboard", cfg.Address, isLoopbackAddress(cfg.Address), true),
 		check("dashboard-host", "environment", "Dashboard hostname", empty(cfg.Cloudflare.DashboardHost, "missing"), cfg.Cloudflare.DashboardHost != "", true),
-		check("access-policy", "environment", "Cloudflare Access policy", "must be enabled before publishing", cfg.Cloudflare.RequireAccess, true),
+		check("origin-auth", "auth", "Origin login", "Code OS /login (Cloudflare Access must stay off)", cfg.Auth.PasswordFile != "" || cfg.Cloudflare.DashboardHost == "", cfg.Cloudflare.DashboardHost != ""),
 	)
 	if cfg.Auth.PasswordFile != "" {
 		report.Checks = append(report.Checks, check("dashboard-auth", "auth", "Dashboard authentication", cfg.Auth.Username, isPrivateRegularFile(cfg.Auth.PasswordFile), true))
@@ -115,18 +119,29 @@ func Inspect(cfg config.Config, options Options) Report {
 		report.Checks = append(report.Checks, check("projects-root", "environment", "Projects root", root, isDirectory(root), true))
 	}
 	report.Checks = append(report.Checks,
-		check("screenshots-root", "images", "Screenshot root", cfg.ScreenshotsRoot, images.ScreenshotsRootExists, false),
-		check("files-root", "images", "Private files root", cfg.FilesRoot, images.FilesRootExists, true),
+		check("screenshots-root", "images", "Screenshot root", screenshotRootDetail(cfg.ScreenshotsRoot, images.ScreenshotsRootExists), images.ScreenshotsRootExists, false),
+		check("files-root", "images", "Private files root", privateDirDetail(cfg.FilesRoot, images.FilesRootExists), images.FilesRootExists, true),
 		check("indexed-images", "images", "Indexed screenshots", fmt.Sprintf("%d indexed", images.IndexedCount), images.IndexedCount > 0, false),
 		check("decodable-images", "images", "Decodable images", imageDecodeDetail(images), images.EmptyCount == 0 && images.UndecodableCount == 0, imageCount(images) > 0 && images.DecodableCount == 0),
-		check("portly", "environment", "Portly", cfg.PortlyBinary, commandExists(cfg.PortlyBinary), true),
+		check("portly", "environment", "Portly", portlyDetail(cfg.PortlyBinary), commandExists(cfg.PortlyBinary) && !isEphemeralPath(cfg.PortlyBinary), true),
 		check("git", "environment", "Git", "git", commandExists("git"), true),
+	)
+	agentStatus := agents.Inspect(cfg, options.Home)
+	report.Checks = append(report.Checks,
+		check("portly-skill", "skills", "Portly agent skill", agentStatus.Detail, agentStatus.SkillInstalled, false),
+		check("portly-rules", "skills", "Portly global rules", agentStatus.Detail, agentStatus.RulesInstalled, false),
+		check("files-privacy", "images", "Files root mode", "0700", isPrivateDirectory(cfg.FilesRoot), false),
+		check("screenshots-privacy", "images", "Screenshot root mode", "0700", !images.ScreenshotsRootExists || isPrivateDirectory(cfg.ScreenshotsRoot), false),
+		check("public-port-host", "environment", "Public port template", empty(cfg.PublicPortHost, "missing; expected port{port}.<zone>"), strings.Contains(cfg.PublicPortHost, "{port}") && !strings.Contains(cfg.PublicPortHost, "*"), false),
+		check("remote-webview-skill", "skills", "Public port skill", agentStatus.Detail, agentStatus.PortsConfigured, false),
+		check("screenshot-skill", "skills", "Screenshot verify skill", agentStatus.Detail, agentStatus.ScreenshotsConfigured, false),
 	)
 	if runtime.GOOS == "linux" {
 		report.Checks = append(report.Checks,
 			check("user-service", "environment", "Code OS user service", "enabled", commandSucceeds("systemctl", "--user", "is-enabled", "code-os.service"), true),
 			check("runtime", "environment", "Code OS runtime", "active", commandSucceeds("systemctl", "--user", "is-active", "code-os.service"), true),
 			check("linger", "environment", "Boot without login", "systemd linger enabled", lingerEnabled(), true),
+			check("portly-daemon", "environment", "Portly daemon", cfg.PortlyBinary, portly.DaemonHealthy(cfg.PortlyBinary), false),
 		)
 	}
 	if cfg.Cloudflare.TokenFile != "" {
@@ -353,6 +368,36 @@ func mustRel(root, path string) string {
 		return filepath.Base(path)
 	}
 	return relative
+}
+
+func isPrivateDirectory(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir() && info.Mode().Perm() == 0o700
+}
+
+func privateDirDetail(path string, exists bool) string {
+	if !exists {
+		return path + " (missing)"
+	}
+	if !isPrivateDirectory(path) {
+		return path + " (expected mode 0700)"
+	}
+	return path + " (0700)"
+}
+
+func screenshotRootDetail(path string, exists bool) string {
+	return privateDirDetail(path, exists)
+}
+
+func isEphemeralPath(path string) bool {
+	return installbin.IsEphemeral(path)
+}
+
+func portlyDetail(binary string) string {
+	if isEphemeralPath(binary) {
+		return binary + " (ephemeral path)"
+	}
+	return binary
 }
 
 func empty(value, fallback string) string {

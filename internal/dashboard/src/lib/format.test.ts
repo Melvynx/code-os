@@ -39,6 +39,7 @@ describe("dashboard formatters", () => {
 
   it("matches values without regard to case", () => {
     expect(matchesQuery("code", ["Code OS", 7890])).toBe(true)
+    expect(matchesQuery("code os", ["Code OS", 7890])).toBe(true)
     expect(matchesQuery("portly", ["Code OS", 7890])).toBe(false)
   })
 })

@@ -70,7 +70,8 @@ go build -o code-os ./cmd/code-os`}</CodeBlock>
             <CodeBlock>{`code-os setup
 code-os doctor
 code-os service install`}</CodeBlock>
-            <p>On Linux, <code>service install</code> starts Code OS immediately, enables it after every reboot, and installs the skills-sync timer when a repository is configured. Use <code>code-os dashboard</code> only for an interactive foreground run.</p>
+            <p>On Linux, <code>setup</code> installs Portly to a persistent path (<code>/usr/local/bin/portly</code> or <code>~/.local/bin/portly</code>, never a <code>.cleanup-*</code> directory), creates screenshot and files directories at mode <code>0700</code>, derives <code>port{"{port}"}.&lt;zone&gt;</code> (never a wildcard), provisions the Cloudflare tunnel when the API token + account + zone are set, registers discovered Git repos as Portly projects without starting servers, and installs the headless Portly, remote-webview, and screenshot verify skills. Agents read hosts from config — they must not hardcode a CDN domain. <code>service install</code> copies the current binary out of any ephemeral path, starts Code OS immediately, enables it after every reboot, installs the skills-sync timer when a repository is configured, and installs the port-sync timer that publishes healthy Portly servers as individual <code>portNNNN.&lt;zone&gt;</code> CNAMEs. Use <code>code-os dashboard</code> only for an interactive foreground run.</p>
+            <p>Env files stay off Git. Copy them from a private store into each repo at mode <code>0600</code> and never print values. Heavy TypeScript checks on a small VPS should use <code>NODE_OPTIONS=--max-old-space-size=6144</code>. If <code>pnpm install</code> reports ignored build scripts, run <code>pnpm approve-builds</code> (or the repo allow-list) before treating the install as complete.</p>
             <p>Generate dedicated secrets instead of reusing a personal password. Sign-in uses the Code OS HTML page at <code>/login</code>, not Cloudflare Access and not HTTP Basic Auth:</p>
             <CodeBlock>{`openssl rand -base64 32 > dashboard-password
 openssl rand -hex 32 > media-bypass-key
@@ -115,7 +116,7 @@ chmod 600 dashboard-password media-bypass-key session-key`}</CodeBlock>
           </DocsSection>
 
           <DocsSection id="screenshots" title="Screenshots and evidence">
-            <p>Visual artifacts are grouped by feature directory and ordered by recency. The authenticated gallery provides a human view; an optional media bypass URL lets Cursor or Codex render a specific image directly.</p>
+            <p><code>setup</code> creates <code>screenshotsRoot</code> and <code>filesRoot</code> at mode <code>0700</code>. <code>code-os doctor</code> reports whether those directories exist, whether they are private, and whether indexed images decode. Visual artifacts are grouped by feature directory and ordered by recency. The authenticated gallery provides a human view; an optional media bypass URL lets Cursor or Codex render a specific image directly.</p>
             <CodeBlock>{`https://your-code-os.example/media/SCREENSHOT_ID?bp=YOUR_MEDIA_KEY`}</CodeBlock>
             <CodeBlock>{`https://your-code-os.example/files/FEATURE/EVIDENCE.png?bp=YOUR_MEDIA_KEY`}</CodeBlock>
             <div className="notice"><ShieldCheck /><p><b>Narrow permission</b> The bypass applies only to <code>GET</code> and <code>HEAD</code> image requests under <code>/media</code> and <code>/files</code>. It never authenticates the dashboard, settings, API, or application gateway.</p></div>
@@ -126,7 +127,7 @@ chmod 600 dashboard-password media-bypass-key session-key`}</CodeBlock>
             <p>Create the API token from this prefilled URL (Account Settings Read, Cloudflare Tunnel Edit, DNS Edit, Zone Read), then store it in a mode-<code>0600</code> file referenced by <code>cloudflare.tokenFile</code>:</p>
             <CodeBlock>{`https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22argotunnel%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Code%20OS`}</CodeBlock>
             <p>That API token is not the tunnel run token. <code>cloudflared</code> uses a second <code>eyJ…</code> secret from tunnel create, typically <code>/etc/cloudflared/code-os.token</code>.</p>
-            <p>Keep Code OS bound to <code>127.0.0.1</code>. Route the dashboard hostname and each <code>portNNNN</code> hostname to <code>http://127.0.0.1:7890</code>. The gateway requires the Code OS session before proxying a healthy Portly application.</p>
+            <p>Keep Code OS bound to <code>127.0.0.1</code>. Ingress contains the dashboard hostname only — never <code>*.&lt;zone&gt;</code>. Publish each healthy Portly port as an individual CNAME matching <code>publicPortHost</code> (default <code>port{"{port}"}.&lt;zone&gt;</code>). <code>code-os cloudflare</code> prints that template and <code>wildcard: false</code>. The gateway requires the Code OS session before proxying a healthy Portly application.</p>
             <CodeBlock>{`code-os dashboard
 # Tunnel origin
 http://127.0.0.1:7890`}</CodeBlock>
@@ -165,7 +166,8 @@ loginctl show-user "$USER" -p Linger`}</CodeBlock>
   "screenshotsRoot": "/root/screenshots",
   "filesRoot": "/root/.local/share/code-os/files",
   "dataDir": "/root/.local/share/code-os",
-  "portlyBinary": "portly",
+  "portlyBinary": "/usr/local/bin/portly",
+  "publicPortHost": "port{port}.example.com",
   "auth": {
     "username": "code-os",
     "passwordFile": "/root/.config/code-os/dashboard-password",

@@ -139,6 +139,17 @@ func (service *Service) Snapshot() model.Snapshot {
 	return service.snapshot
 }
 
+func (service *Service) Application(id string) (model.Application, bool) {
+	service.mutex.RLock()
+	defer service.mutex.RUnlock()
+	for _, application := range service.snapshot.Apps {
+		if application.ID == id {
+			return application, true
+		}
+	}
+	return model.Application{}, false
+}
+
 func (service *Service) MediaPath(id string) (string, bool) {
 	service.mutex.RLock()
 	defer service.mutex.RUnlock()

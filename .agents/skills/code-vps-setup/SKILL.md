@@ -5,11 +5,11 @@ description: code-vps-setup provisions a new Code OS VPS. Use $code-vps-setup fo
 
 # $code-vps-setup
 
-This is the only provisioning skill. Invoke it as `$code-vps-setup`. Do not load `code-os`, do not SSH-find other SKILL.md files, do not invent a second Cloudflare token flow.
+This is the only provisioning skill. Invoke it as `$code-vps-setup`. Read `INSTALLATION.md` first for the skill map. Do not load `code-os`, do not SSH-find other SKILL.md files, do not invent a second Cloudflare token flow.
 
 Provision a Linux VPS so Code OS listens on loopback, Cloudflare Tunnel is TLS only, and origin auth is the custom login page plus a media bypass key.
 
-Do not install Cloudflare Access, Zero Trust login, HTTP Basic Auth, or `WWW-Authenticate`. `cloudflare.requireAccess` in config is a leftover doctor flag. Ignore `code-os cloudflare` when it says “Protect … with Cloudflare Access”.
+Do not install Cloudflare Access, Zero Trust login, HTTP Basic Auth, or `WWW-Authenticate`. `cloudflare.requireAccess` in config is a leftover doctor flag. `code-os cloudflare` must show the dashboard host, `publicPortHost`, and `"wildcard": false`.
 
 ## Auth model (this is the product)
 
@@ -82,9 +82,9 @@ Host <alias>
 4. Do not reboot the VPS after the key is added. `sshd` rereads `authorized_keys` on the next connection.
 5. Connect with `ssh <alias>`. If it still asks for a password: wrong `User`, or the public key is on a different account than `User`.
 
-## 2. Bootstrap the VPS
+## 2. Binaries on the VPS
 
-Completion: `code-os version` and `cloudflared version` work; `portly status` talks to the local daemon.
+Completion: `code-os version` and `cloudflared version` work. Do **not** install Portly by hand — `setup` does that.
 
 ```bash
 install -d -m 700 \
@@ -92,20 +92,19 @@ install -d -m 700 \
   /root/.config/code-os \
   /root/.config/tokens \
   /root/.local/bin \
+  /root/.local/share/code-os/screenshots \
   /root/.local/share/code-os/files
 ```
 
-Install `code-os` from the latest Linux amd64 release (or build from this repo). Put the binary on `PATH`, typically `~/.local/bin/code-os`.
+Install `code-os` from the latest Linux amd64 release (or build from this repo). Put it on `PATH` at `~/.local/bin/code-os` or `/usr/local/bin/code-os`. Never leave it under a `.cleanup-*` path.
 
-Install `cloudflared` from Cloudflare's Linux package or GitHub release to `/usr/local/bin/cloudflared`.
+Install `cloudflared` from Cloudflare's Linux package or GitHub release to `/usr/local/bin/cloudflared`. Setup fails if this binary is missing.
 
-Install the **headless** Portly CLI (`/usr/local/bin/portly` or `~/.local/bin/portly`). Enable the systemd user `portly.service` on `127.0.0.1:7737`. Do not install Portly.app.
+Keep the Code OS daemon on `127.0.0.1:7890`. Never bind it to `0.0.0.0`. Do not install Portly.app.
 
-Keep the Code OS daemon on `127.0.0.1:7890`. Never bind it to `0.0.0.0`.
+## 3. Cloudflare API token only
 
-## 3. Cloudflare API token, then tunnel
-
-Completion: API token file is `0600` and `cloudflare-cli auth test` (or an equivalent `GET /accounts/<id>/cfd_tunnel`) succeeds. Tunnel status becomes healthy after step 5.
+Completion: API token file is `0600` and `GET /accounts/<id>/cfd_tunnel` succeeds. **Do not create the tunnel, ingress, DNS, or cloudflared unit by hand.** `code-os setup` provisions them. Creating the tunnel twice leaves you with an id and no run token.
 
 1. Hand the user the token URL from the top of this skill. Wait for the token value.
 2. Store it without echoing:
@@ -115,36 +114,22 @@ install -d -m 700 ~/.config/tokens
 # write the token, chmod 600, no cat, no tee to the terminal
 ```
 
-3. Resolve `accountId` and `zoneId` from the API. Write them into setup flags; they are configuration, never constants in source.
-4. Create a remotely-managed tunnel (`config_src=cloudflare`):
-
-```bash
-curl -sS "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel" \
-  -H "Authorization: Bearer $(tr -d '\n' < ~/.config/tokens/cloudflare-cli.txt)" \
-  -H "Content-Type: application/json" \
-  --data '{"name":"code-os","config_src":"cloudflare"}'
-```
-
-Copy `result.id` (tunnel id) and `result.token` (run token). Put the run token in `/etc/cloudflared/code-os.token` mode `0600`.
-
-5. PUT ingress: dashboard hostname → `http://127.0.0.1:7890`, then catch-all `http_status:404`. Preserve unrelated ingress rules if the tunnel is shared.
-6. Create proxied CNAMEs:
-
-- `<dashboardHost>` → `<tunnelId>.cfargotunnel.com`
-- later, each `portNNNN` host via the port-sync worker — never a wildcard
+3. Resolve `accountId` and `zoneId` from the API. Pass them as setup flags. They are configuration, never constants in source.
 
 Do not create an Access application, an Access policy, or a Zero Trust login method.
 
 ## 4. `code-os setup`
 
-Completion: `~/.config/code-os/config.json` exists, password / bypass / session files are `0600`, `code-os doctor` does not fail required checks.
+Completion: `~/.config/code-os/config.json` exists, password / bypass / session files are `0600`, Cloudflare provision printed a tunnel id, `code-os doctor` does not fail required checks.
+
+Use `--non-interactive`. **Omit `--cloudflare-tunnel-id`** on a new machine. Only pass it when `/etc/cloudflared/code-os.token` already exists.
 
 ```bash
-code-os setup \
+code-os setup --non-interactive \
   --name <environment> \
   --type remote \
   --projects-root /root/projects \
-  --screenshots-root ~/.local/share/code-os/files \
+  --screenshots-root ~/.local/share/code-os/screenshots \
   --files-root ~/.local/share/code-os/files \
   --dashboard-host <dashboardHost> \
   --public-port-host 'port{port}.<zone>' \
@@ -153,7 +138,6 @@ code-os setup \
   --dashboard-bypass-key-file ~/.config/code-os/media-bypass-key \
   --dashboard-session-key-file ~/.config/code-os/session-key \
   --dashboard-trusted-ips-file ~/.config/code-os/trusted-ips \
-  --cloudflare-tunnel-id <tunnelId> \
   --cloudflare-account-id <accountId> \
   --cloudflare-zone-id <zoneId> \
   --cloudflare-token-file ~/.config/tokens/cloudflare-cli.txt \
@@ -161,51 +145,67 @@ code-os setup \
   --skills-directory ~/.agents
 ```
 
-`setup` generates missing secret files. Tell the user the password file path and that they sign in on the **custom** `/login` page — not Cloudflare, not HTTP Basic.
+If Cloudflare flags are missing, setup now warns and leaves the machine private. If they are present and provision fails, setup exits non-zero — fix that before `service install`.
 
-## 5. systemd units
+`setup` then:
 
-Completion: `cloudflared-code-os.service` is active; `systemctl --user is-active code-os.service` is active; linger is `yes`.
-
-Tunnel connector (system unit, not user):
-
-```ini
-# /etc/systemd/system/cloudflared-code-os.service
-[Unit]
-Description=Cloudflare Tunnel for Code OS
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate run --token-file /etc/cloudflared/code-os.token
-Restart=always
-RestartSec=5
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadOnlyPaths=/etc/cloudflared/code-os.token
-
-[Install]
-WantedBy=multi-user.target
-```
+- creates `screenshotsRoot` / `filesRoot` / `dataDir` at mode `0700` (keep screenshots and files as **separate** directories)
+- generates missing dashboard secrets at `0600`
+- installs the headless Portly CLI to `/usr/local/bin/portly` or `~/.local/bin/portly`, then `portly forever enable`
+- copies `code-os` itself to a persistent bin if the current binary is ephemeral
+- derives `publicPortHost` as `port{port}.<zone>` when the flag is omitted. **Never a wildcard.**
+- creates the remotely-managed tunnel, dashboard CNAME, ingress (dashboard host + `http_status:404`), and `cloudflared-code-os.service`
+- registers discovered Git repos as Portly projects **without starting servers**
+- installs Portly / remote-webview / verify / code-os agent skills
 
 Then:
 
 ```bash
-systemctl enable --now cloudflared-code-os.service
 code-os service install
 code-os doctor
 loginctl show-user "$USER" -p Linger
 ```
 
-`service install` writes the user unit, enables linger, starts Code OS now, and installs the skills-sync timer when a repository is configured.
+`service install` points the user unit at the persistent binary, writes `code-os-port-sync.timer` for individual `portNNNN.<zone>` CNAMEs, and installs the skills-sync timer. Tell the user the **paths** of the password and bypass files (not values) and that they sign in on the **custom** `/login` page.
+
+## 4b. Bootstrap projects, envs, and Node
+
+Do **not** hardcode product names. After `setup`, clone the user's repos under `projectsRoot`, then register each persistent app with Portly (`add-project` + `add-server`). Read the dev command and port from the repo; do not invent them. Do not start every Vite app at once.
+
+Env files stay off Git. Copy them from a private store the user names (1Password, another machine, `scp`). Never print values. Typical destinations:
+
+```text
+<repo>/.env
+<repo>/.env.local
+<repo>/.env.prod
+```
+
+Mode `0600`. Confirm the files exist and are non-empty; do not `cat` them.
+
+Heavy TypeScript checks on a small VPS:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=6144 pnpm typecheck
+```
+
+If `pnpm install` reports `Ignored build scripts`, run `pnpm approve-builds` (or the repo's documented allow-list) before treating the install as complete. `esbuild`, `sharp`, and `@parcel/watcher` usually must run.
+
+## 5. Units are up
+
+Completion: all three are true. Do not write the cloudflared unit by hand unless setup could not (need root).
+
+```bash
+systemctl is-active cloudflared-code-os.service
+systemctl --user is-active code-os.service
+loginctl show-user "$USER" -p Linger
+code-os cloudflare   # dashboard host + publicPortHost + wildcard: false
+```
 
 ## 6. Verify the real auth path
 
 Completion: all four checks pass.
 
-1. `https://<dashboardHost>/login` is the Code OS HTML form (`Sign in to Code OS`, fields `username` + `current-password`). It is not a Cloudflare Access page.
+1. `https://<dashboardHost>/login` is the Code OS HTML form (`Sign in to Code OS`, fields `username` + `current-password`). It is not a Cloudflare Access page. On the VPS itself, prove `http://127.0.0.1:7890/login` first. A `530` from the box to its own public hostname is often Cloudflare hairpin — confirm from an external client.
 2. Sign in with `auth.username` and the contents of `auth.passwordFile`. Never paste those values into git, issues, or chat logs.
 3. `/app/` loads. `/docs` is public without a session.
 4. Media bypass works and stays narrow:

@@ -201,12 +201,45 @@ func validRepositoryPath(path string) bool {
 }
 
 func isSameOrigin(request *http.Request) bool {
-	origin := strings.TrimSpace(request.Header.Get("Origin"))
-	if origin == "" {
+	if foreignOrigin(request) {
 		return false
 	}
-	parsed, err := url.Parse(origin)
-	return err == nil && strings.EqualFold(parsed.Host, request.Host) && parsed.Scheme == externalProtocol(request)
+	switch strings.ToLower(strings.TrimSpace(request.Header.Get("Sec-Fetch-Site"))) {
+	case "same-origin":
+		return true
+	}
+	return originHeaderMatches(request)
+}
+
+func foreignOrigin(request *http.Request) bool {
+	switch strings.ToLower(strings.TrimSpace(request.Header.Get("Sec-Fetch-Site"))) {
+	case "cross-site", "same-site":
+		return true
+	}
+	origin := strings.TrimSpace(request.Header.Get("Origin"))
+	if origin == "" || strings.EqualFold(origin, "null") {
+		return false
+	}
+	return !originHeaderMatches(request)
+}
+
+func originHeaderMatches(request *http.Request) bool {
+	candidate := strings.TrimSpace(request.Header.Get("Origin"))
+	if candidate == "" || strings.EqualFold(candidate, "null") {
+		candidate = strings.TrimSpace(request.Header.Get("Referer"))
+	}
+	parsed, err := url.Parse(candidate)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	if !strings.EqualFold(parsed.Hostname(), requestHostname(request)) {
+		return false
+	}
+	scheme := externalProtocol(request)
+	if strings.EqualFold(parsed.Scheme, scheme) {
+		return true
+	}
+	return strings.EqualFold(parsed.Scheme, "https") && scheme == "http"
 }
 
 func writeConfigSecret(path, secret string) error {

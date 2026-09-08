@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,6 +48,9 @@ func TestInspectReportsDirtyCheckout(t *testing.T) {
 	})
 	if status.State != StateDirty || status.Synced || status.Git.Untracked != 1 {
 		t.Fatalf("status = %+v, want dirty", status)
+	}
+	if !strings.Contains(status.Message, "origin/main") || !containsIssue(status.Issues, "not on origin/main") {
+		t.Fatalf("dirty status should say origin/main is unpublished: %+v", status)
 	}
 }
 

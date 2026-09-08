@@ -83,7 +83,7 @@ func Defaults() (Config, error) {
 		PortlyBinary:    "portly",
 		Cloudflare: Cloudflare{
 			TunnelMode:    "shared",
-			RequireAccess: true,
+			RequireAccess: false,
 		},
 	}, nil
 }
@@ -184,6 +184,9 @@ func (cfg Config) Validate() error {
 	}
 	if cfg.Auth.TrustedIPsFile != "" && cfg.Auth.PasswordFile == "" {
 		problems = append(problems, "auth trustedIPsFile requires username and passwordFile")
+	}
+	if strings.Contains(cfg.PublicPortHost, "*") {
+		problems = append(problems, "publicPortHost must not be a wildcard; use port{port}.<zone>")
 	}
 	if cfg.PublicPortHost != "" && !strings.Contains(cfg.PublicPortHost, "{port}") {
 		problems = append(problems, "publicPortHost must contain {port}")

@@ -1,6 +1,6 @@
 # Code OS
 
-**Setup skill: `$code-vps-setup`** (`.agents/skills/code-vps-setup/SKILL.md`). Only skill for a new VPS. `$code-os` is operate-only — never use it to provision.
+**Start at `INSTALLATION.md`.** New VPS: `$code-vps-setup` (`.agents/skills/code-vps-setup/SKILL.md`). `$code-os` is operate-only — never use it to provision.
 
 ## Product contract
 

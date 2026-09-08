@@ -1,21 +1,23 @@
 import { ExternalLinkIcon } from "lucide-react"
 
 import type { Application } from "@/api/schema"
+import { AppIcon } from "@/components/app-icon"
 import { ProcessControlDialog } from "@/components/process-control-dialog"
 import { ApplicationStatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  applicationDisplayName,
+  applicationDomain,
+  applicationHostLabel,
+  applicationHref,
+  applicationMemory,
+  applicationRole,
+  applicationTitle,
+  sortApplications,
+} from "@/lib/applications"
 import { formatBytes } from "@/lib/format"
-
-function safeHttpUrl(value: string | undefined) {
-  if (!value) return null
-  try {
-    const url = new URL(value, window.location.origin)
-    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null
-  } catch {
-    return null
-  }
-}
+import { applicationAccent } from "@/lib/identity-color"
 
 type ApplicationTableProps = Readonly<{
   applications: Application[]
@@ -25,6 +27,8 @@ type ApplicationTableProps = Readonly<{
 }>
 
 export function ApplicationTable({ applications, compact = false, pendingApplicationId, onStop }: ApplicationTableProps) {
+  const rows = sortApplications(applications)
+
   return (
     <Table>
       <caption className="sr-only">Applications supervised by Portly</caption>
@@ -38,36 +42,45 @@ export function ApplicationTable({ applications, compact = false, pendingApplica
         </TableRow>
       </TableHeader>
       <TableBody>
-        {applications.map((application) => {
-          const publicUrl = safeHttpUrl(application.publicUrl ?? application.url)
+        {rows.map((application) => {
+          const href = applicationHref(application)
+          const domain = applicationDomain(application)
+          const host = applicationHostLabel(application)
           return (
             <TableRow key={application.id}>
               <TableCell className="px-4 py-3 align-top whitespace-normal">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <p className="font-medium">{application.projectName} / {application.name}</p>
-                  <p className="max-w-xl truncate font-mono text-xs text-muted-foreground">{application.command}</p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <AppIcon application={application} accent={applicationAccent(application, rows)} size="sm" />
+                  <div className="min-w-0">
+                    <p className="font-medium">{applicationTitle(application)}</p>
+                    <p className="mt-0.5 text-sm text-foreground/75">
+                      {domain || host || application.projectName}
+                      <span className="text-muted-foreground"> · {applicationRole(application)}</span>
+                    </p>
+                    {!compact ? <p className="mt-1 max-w-xl truncate font-mono text-[11px] text-muted-foreground">{application.command}</p> : null}
+                  </div>
                 </div>
               </TableCell>
               <TableCell className="px-4 py-3 align-top font-mono tabular-nums">{application.port || "—"}</TableCell>
               <TableCell className="px-4 py-3 align-top"><ApplicationStatusBadge application={application} /></TableCell>
               <TableCell className="px-4 py-3 align-top font-mono tabular-nums text-muted-foreground">
-                {formatBytes(application.residentMemoryBytes || application.memoryBytes)}
+                {formatBytes(applicationMemory(application))}
               </TableCell>
               {!compact ? (
                 <TableCell className="px-4 py-3 align-top text-right">
                   <div className="flex justify-end gap-2">
-                    {publicUrl ? (
+                    {href ? (
                       <Button asChild size="sm" variant="outline">
-                        <a href={publicUrl} target="_blank" rel="noreferrer">
+                        <a href={href} target="_blank" rel="noreferrer">
                           Open
                           <ExternalLinkIcon data-icon="inline-end" />
                         </a>
                       </Button>
                     ) : null}
                     {onStop && application.state === "running" ? (
-                      <ProcessControlDialog action="application" name={`${application.projectName} / ${application.name}`} pending={pendingApplicationId === application.id} onConfirm={() => onStop(application.id)} />
+                      <ProcessControlDialog action="application" name={applicationDisplayName(application)} pending={pendingApplicationId === application.id} onConfirm={() => onStop(application.id)} />
                     ) : null}
-                    {!publicUrl && (!onStop || application.state !== "running") ? <span className="font-mono text-xs text-muted-foreground">—</span> : null}
+                    {!href && (!onStop || application.state !== "running") ? <span className="font-mono text-xs text-muted-foreground">—</span> : null}
                   </div>
                 </TableCell>
               ) : null}

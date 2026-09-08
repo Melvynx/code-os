@@ -20,6 +20,8 @@ type statusPayload struct {
 		ID      string `json:"id"`
 		Name    string `json:"name"`
 		Root    string `json:"root"`
+		Icon    string `json:"icon"`
+		Color   string `json:"color"`
 		Servers []struct {
 			ID                  string  `json:"id"`
 			Name                string  `json:"name"`
@@ -69,9 +71,11 @@ func (client Client) Applications(ctx context.Context) ([]model.Application, err
 				ID: server.ID, ProjectID: projectID, ProjectName: projectName,
 				Name: server.Name, Command: server.Command, Directory: server.Directory,
 				State: server.State, Port: server.Port, PID: server.PID, Healthy: server.Healthy,
-				URL: server.URL, PublicURL: publicURL, CPUPercent: server.CPUPercent,
-				MemoryBytes: server.MemoryBytes, ResidentMemoryBytes: server.ResidentMemoryBytes,
-				RestartCount: server.RestartCount,
+				URL: server.URL, PublicURL: publicURL, ProjectPath: project.Root,
+				ProjectColor: project.Color, ProjectIcon: project.Icon,
+				Domain:     InferDomain(projectName, project.Root),
+				CPUPercent: server.CPUPercent, MemoryBytes: server.MemoryBytes,
+				ResidentMemoryBytes: server.ResidentMemoryBytes, RestartCount: server.RestartCount,
 			})
 		}
 	}

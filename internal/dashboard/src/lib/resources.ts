@@ -1,9 +1,6 @@
 import type { ResourceHistory, ResourceSeries } from "@/api/resources"
 
-export const RESOURCE_COLORS = {
-  application: ["#50e3c2", "#3dd6b0", "#8af0d8", "#1f8f78"],
-  agent: ["#0070f3", "#4d9aff", "#58a6ff", "#79b8ff"],
-} as const
+import { uniqueIdentityColor } from "./identity-color"
 
 export function resourceSeriesKey(series: Pick<ResourceSeries, "kind" | "name">) {
   return `${series.kind}:${series.name}`
@@ -44,10 +41,8 @@ export function groupResourceSeries(series: ResourceSeries[]) {
   })
 }
 
-export function resourceColor(series: Pick<ResourceSeries, "id" | "kind">, seriesList: Array<Pick<ResourceSeries, "id" | "kind">>) {
-  const palette = RESOURCE_COLORS[series.kind]
-  const peers = seriesList.filter((item) => item.kind === series.kind)
-  return palette[Math.max(0, peers.findIndex((item) => item.id === series.id)) % palette.length] ?? "#888"
+export function resourceColor(series: Pick<ResourceSeries, "id" | "kind" | "name">, seriesList: Array<Pick<ResourceSeries, "id" | "kind" | "name">>) {
+  return uniqueIdentityColor(series.name, seriesList.map((item) => item.name))
 }
 
 export function toChartRows(history: ResourceHistory, metric: "cpuPercent" | "memoryBytes") {

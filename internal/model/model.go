@@ -56,6 +56,10 @@ type Application struct {
 	Healthy             *bool   `json:"healthy,omitempty"`
 	URL                 string  `json:"url,omitempty"`
 	PublicURL           string  `json:"publicUrl,omitempty"`
+	ProjectPath         string  `json:"projectPath,omitempty"`
+	ProjectColor        string  `json:"projectColor,omitempty"`
+	ProjectIcon         string  `json:"projectIcon,omitempty"`
+	Domain              string  `json:"domain,omitempty"`
 	CPUPercent          float64 `json:"cpuPercent"`
 	MemoryBytes         int64   `json:"memoryBytes"`
 	ResidentMemoryBytes int64   `json:"residentMemoryBytes"`

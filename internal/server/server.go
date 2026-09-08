@@ -27,6 +27,9 @@ type HTTPServer struct {
 	ConfigPath string
 	Service    *Service
 	Logger     *slog.Logger
+	IconClient *http.Client
+	IconOrigin func(model.Application) string
+	Icons      *iconCache
 }
 
 func (server HTTPServer) Handler() (http.Handler, error) {
@@ -47,6 +50,7 @@ func (server HTTPServer) Handler() (http.Handler, error) {
 	protected.HandleFunc("GET /api/snapshot", server.snapshot)
 	protected.HandleFunc("GET /api/resources", server.resources)
 	protected.HandleFunc("POST /api/refresh", server.refresh)
+	protected.HandleFunc("GET /api/applications/{id}/icon", server.applicationIcon)
 	protected.HandleFunc("POST /api/applications/{id}/stop", server.stopApplication)
 	protected.HandleFunc("POST /api/agents/{id}/terminate", server.terminateAgent)
 	protected.HandleFunc("GET /api/health", server.health)

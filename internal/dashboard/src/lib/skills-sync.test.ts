@@ -32,6 +32,8 @@ const base: SkillsStatus = {
 describe("skills sync helpers", () => {
   it("labels synced and conflict states", () => {
     expect(skillsStateLabel("synced")).toBe("Synced")
+    expect(skillsStateLabel("dirty")).toBe("Local unpublished changes")
+    expect(skillsStateLabel("ahead")).toBe("Local commits unpublished")
     expect(skillsStateTone("synced")).toBe("success")
     expect(skillsStateTone("conflict")).toBe("error")
     expect(skillsStateTone("dirty")).toBe("warning")

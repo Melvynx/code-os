@@ -1,6 +1,6 @@
 # Code OS
 
-**New VPS setup: `$code-vps-setup`** — `.agents/skills/code-vps-setup/SKILL.md`. That is the only install skill (SSH, Hostinger, Cloudflare token URL, tunnel, `/login`, `?bp=`). Do not load `$code-os` to provision.
+**Start at [`INSTALLATION.md`](INSTALLATION.md)** for the skill map. New VPS: `$code-vps-setup` — `.agents/skills/code-vps-setup/SKILL.md`. That is the only install skill. Do not load `$code-os` to provision.
 
 Code OS turns a Mac or Linux host into one legible development environment. It discovers repositories, every Git worktree and subproject; observes and controls Portly applications and coding agents; groups screenshots by feature; synchronizes a private skills repository; and exposes the result through one secure service.
 
@@ -10,29 +10,30 @@ Project Git inspection is read-only. Portly remains the process supervisor. Code
 
 ## Quick start
 
-A new Linux VPS is `$code-vps-setup`, not this command list. Follow that skill, then run `code-os setup` with the flags it prints.
+A new Linux VPS is `INSTALLATION.md` then `$code-vps-setup`, not this command list. Always pass `--non-interactive` and a real `--dashboard-host`. Omit `--cloudflare-tunnel-id` on a new machine.
 
 ```bash
 go build -o bin/code-os ./cmd/code-os
-./bin/code-os setup \
+./bin/code-os setup --non-interactive \
   --projects-root /root/projects \
   --screenshots-root ~/.local/share/code-os/screenshots \
   --files-root ~/.local/share/code-os/files \
-  --dashboard-host code-os.mlvcdn.com \
-  --dashboard-username code-os \
-  --dashboard-password-file ~/.config/code-os/dashboard-password \
-  --dashboard-bypass-key-file ~/.config/code-os/media-bypass-key \
-  --dashboard-session-key-file ~/.config/code-os/session-key \
-  --dashboard-trusted-ips-file ~/.config/code-os/trusted-ips \
-  --public-port-host 'port{port}.mlvcdn.com' \
+  --dashboard-host code-os.example.com \
+  --public-port-host 'port{port}.example.com' \
+  --cloudflare-account-id <accountId> \
+  --cloudflare-zone-id <zoneId> \
+  --cloudflare-token-file ~/.config/tokens/cloudflare-cli.txt \
   --skills-repository git@github.com:YOUR_ACCOUNT/agents-config.git \
   --skills-directory ~/.agents
 ./bin/code-os service install
+./bin/code-os doctor
 ```
 
 Open `http://127.0.0.1:7890`; the root redirects to the authenticated command center under `/app/`. Documentation remains public under `/docs`. Configuration defaults to `~/.config/code-os/config.json`; runtime data defaults to `~/.local/share/code-os`.
 
-On Linux, `service install` enables systemd user lingering, installs and starts Code OS immediately, and enables it for every reboot. Running the command again updates the unit and restarts the daemon on the current binary.
+On Linux, `setup` installs a persistent Portly CLI (`/usr/local/bin/portly` or `~/.local/bin/portly`), creates screenshot/files dirs at `0700`, derives `port{port}.<zone>` (never a wildcard), provisions the Cloudflare tunnel when the token is present, registers discovered Git repos as Portly projects without starting servers, and installs the Portly / remote-webview / verify skills. `service install` copies the binary out of any `.cleanup-*` path, enables linger, starts Code OS, and installs the skills-sync and port-sync timers. Running the command again updates the units and restarts the daemon on the current binary.
+
+Do not hardcode product names. After clone, `add-server` from each repo's real command, port, and health check. Copy env files from a private store (`0600`); never commit or print values. Heavy typechecks: `NODE_OPTIONS=--max-old-space-size=6144`. If `pnpm install` ignores build scripts, run `pnpm approve-builds` before treating the install as complete.
 
 ## Commands
 

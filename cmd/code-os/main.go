@@ -23,10 +23,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/melvynx/code-os/internal/agents"
 	"github.com/melvynx/code-os/internal/cloudflare"
 	"github.com/melvynx/code-os/internal/config"
 	"github.com/melvynx/code-os/internal/diagnostics"
+	"github.com/melvynx/code-os/internal/installbin"
 	"github.com/melvynx/code-os/internal/model"
+	portlyinstall "github.com/melvynx/code-os/internal/portly"
 	"github.com/melvynx/code-os/internal/server"
 	"github.com/melvynx/code-os/internal/skills"
 	"github.com/melvynx/code-os/internal/store"
@@ -138,6 +141,29 @@ func setup(arguments []string) error {
 	if strings.TrimSpace(*dashboardHost) == "" {
 		return errors.New("dashboard hostname is required; pass --dashboard-host")
 	}
+	if strings.TrimSpace(*portHost) == "" {
+		*portHost = config.DefaultPublicPortHost(*dashboardHost)
+	}
+	if strings.TrimSpace(*authUsername) == "" {
+		*authUsername = "code-os"
+	}
+	if strings.TrimSpace(*authPasswordFile) == "" || strings.TrimSpace(*authBypassKeyFile) == "" {
+		configDir, err := os.UserConfigDir()
+		if err != nil {
+			return err
+		}
+		configDir = filepath.Join(configDir, "code-os")
+		if strings.TrimSpace(*authPasswordFile) == "" {
+			*authPasswordFile = filepath.Join(configDir, "dashboard-password")
+		}
+		if strings.TrimSpace(*authBypassKeyFile) == "" {
+			*authBypassKeyFile = filepath.Join(configDir, "media-bypass-key")
+		}
+	}
+	if !*nonInteractive && isTerminal(os.Stdin) {
+		reader := bufio.NewReader(os.Stdin)
+		*portHost = prompt(reader, "Public port hostname template", *portHost)
+	}
 	cfg := defaults
 	cfg.EnvironmentName = strings.TrimSpace(*name)
 	cfg.EnvironmentType = strings.TrimSpace(*typeName)
@@ -150,7 +176,7 @@ func setup(arguments []string) error {
 	cfg.Cloudflare = config.Cloudflare{
 		DashboardHost: strings.TrimSpace(*dashboardHost), TunnelMode: strings.TrimSpace(*tunnelMode), TunnelID: strings.TrimSpace(*tunnelID),
 		AccountID: strings.TrimSpace(*accountID), ZoneID: strings.TrimSpace(*zoneID),
-		TokenFile: expandOptionalPath(*tokenFile), RequireAccess: true,
+		TokenFile: expandOptionalPath(*tokenFile), RequireAccess: false,
 	}
 	cfg.Auth = config.Auth{
 		Username: strings.TrimSpace(*authUsername), PasswordFile: expandOptionalPath(*authPasswordFile),
@@ -186,8 +212,55 @@ func setup(arguments []string) error {
 			return err
 		}
 	}
+	for _, dir := range []string{cfg.ScreenshotsRoot, cfg.FilesRoot, cfg.DataDir} {
+		if err := installbin.EnsurePrivateDir(dir); err != nil {
+			return err
+		}
+	}
+	if err := os.MkdirAll(cfg.ProjectsRoots[0], 0o755); err != nil {
+		return fmt.Errorf("create projects root: %w", err)
+	}
+	home, _ := os.UserHomeDir()
+	if installed, err := portlyinstall.InstallLinux(home, cfg.PortlyBinary); err != nil {
+		return fmt.Errorf("install Portly: %w", err)
+	} else {
+		cfg.PortlyBinary = installed
+	}
 	if err := config.Save(*configPath, cfg); err != nil {
 		return err
+	}
+	if _, err := persistExecutable(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not install a persistent code-os binary: %v\n", err)
+	}
+	if cfg.Cloudflare.TokenFile != "" && cfg.Cloudflare.AccountID != "" && cfg.Cloudflare.ZoneID != "" {
+		provisioned, result, err := cloudflare.Provision(cfg)
+		if err != nil {
+			return fmt.Errorf("cloudflare provision: %w", err)
+		}
+		cfg = provisioned
+		if err := config.Save(*configPath, cfg); err != nil {
+			return err
+		}
+		fmt.Println(result.Message)
+	} else {
+		fmt.Fprintf(os.Stderr, "warning: Cloudflare tunnel not provisioned (need --cloudflare-token-file, --cloudflare-account-id, --cloudflare-zone-id)\n")
+	}
+	agentSetup, err := agents.Install(cfg)
+	if err != nil {
+		return fmt.Errorf("install Portly agent skill: %w", err)
+	}
+	fmt.Println(agentSetup.Message)
+	fmt.Printf("Agent skills: %s\n", strings.Join(agentSetup.Skills, ", "))
+	if cfg.PublicPortHost != "" {
+		fmt.Printf("Public ports: https://%s/ (individual CNAMEs, no wildcard)\n", strings.ReplaceAll(cfg.PublicPortHost, "{port}", "<port>"))
+	}
+	if err := portlyinstall.EnableForever(cfg.PortlyBinary); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not enable Portly forever: %v\n", err)
+	}
+	if discovered, err := portlyinstall.RegisterMissingProjects(cfg.PortlyBinary, cfg.ProjectsRoots[0]); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not inspect projects for Portly: %v\n", err)
+	} else {
+		fmt.Print(portlyinstall.FormatDiscovery(discovered))
 	}
 	fmt.Printf("Code OS configured at %s\n", *configPath)
 	fmt.Printf("Dashboard origin: http://%s\n", cfg.Address)
@@ -199,7 +272,7 @@ func setup(arguments []string) error {
 		}
 		fmt.Printf("Trusted IP file: %s\n", cfg.Auth.TrustedIPsFile)
 	} else {
-		fmt.Printf("Public hostname: https://%s (Cloudflare Access required)\n", cfg.Cloudflare.DashboardHost)
+		fmt.Printf("Public hostname: https://%s (dashboard password is missing)\n", cfg.Cloudflare.DashboardHost)
 	}
 	fmt.Println("Next: code-os service install && code-os doctor")
 	return nil
@@ -340,7 +413,6 @@ func cloudflareCommand(arguments []string) error {
 		return err
 	}
 	fmt.Print(payload)
-	fmt.Fprintf(os.Stderr, "Protect https://%s with Cloudflare Access before publishing.\n", cfg.Cloudflare.DashboardHost)
 	return nil
 }
 
@@ -361,9 +433,9 @@ func serviceCommand(arguments []string) error {
 	if err != nil {
 		return err
 	}
-	executable, err := os.Executable()
+	executable, err := persistExecutable()
 	if err != nil {
-		return fmt.Errorf("resolve executable: %w", err)
+		return fmt.Errorf("install persistent code-os binary: %w", err)
 	}
 	unit := renderUnit(executable, *configPath, cfg.DataDir, cfg.Cloudflare.TokenFile)
 	if action == "print" {
@@ -411,6 +483,15 @@ func serviceCommand(arguments []string) error {
 	}
 	if err := runCommand("systemctl", "--user", "restart", "code-os.service"); err != nil {
 		return err
+	}
+	agentSetup, err := agents.Install(cfg)
+	if err != nil {
+		return fmt.Errorf("install Portly agent skill: %w", err)
+	}
+	fmt.Println(agentSetup.Message)
+	fmt.Printf("Agent skills: %s\n", strings.Join(agentSetup.Skills, ", "))
+	if err := installPortSync(cfg, filepath.Join(filepath.Dir(agentSetup.SkillPath), "remote-webview", "scripts", "remote_webview.py")); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not install port-sync units: %v\n", err)
 	}
 	if cfg.Skills.Repository != "" {
 		if err := runCommand("systemctl", "--user", "enable", "--now", "code-os-skills-sync.timer"); err != nil {
@@ -652,6 +733,89 @@ PrivateTmp=true
 [Install]
 WantedBy=default.target
 `, strconv.Quote(executable), strconv.Quote(configPath))
+}
+
+func persistExecutable() (string, error) {
+	current, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if !installbin.IsEphemeral(current) {
+		return current, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	dest, err := installbin.PersistentPath(home, "code-os")
+	if err != nil {
+		return "", err
+	}
+	if err := installbin.CopyExecutable(current, dest); err != nil {
+		return "", err
+	}
+	fmt.Printf("Installed persistent binary: %s\n", dest)
+	return dest, nil
+}
+
+func installPortSync(cfg config.Config, scriptPath string) error {
+	if cfg.PublicPortHost == "" || cfg.Cloudflare.TunnelID == "" || cfg.Cloudflare.AccountID == "" || cfg.Cloudflare.ZoneID == "" {
+		return nil
+	}
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("port-sync script: %w", err)
+	}
+	unitDir := "/etc/systemd/system"
+	if err := os.MkdirAll(unitDir, 0o755); err != nil {
+		return fmt.Errorf("port-sync requires root to write %s: %w", unitDir, err)
+	}
+	servicePath := filepath.Join(unitDir, "code-os-port-sync.service")
+	timerPath := filepath.Join(unitDir, "code-os-port-sync.timer")
+	if err := os.WriteFile(servicePath, []byte(renderPortSyncUnit(scriptPath)), 0o644); err != nil {
+		return fmt.Errorf("write port-sync service: %w", err)
+	}
+	if err := os.WriteFile(timerPath, []byte(renderPortSyncTimer()), 0o644); err != nil {
+		return fmt.Errorf("write port-sync timer: %w", err)
+	}
+	if err := runCommand("systemctl", "daemon-reload"); err != nil {
+		return err
+	}
+	if err := runCommand("systemctl", "enable", "--now", "code-os-port-sync.timer"); err != nil {
+		return err
+	}
+	fmt.Printf("Installed %s and %s\n", servicePath, timerPath)
+	return nil
+}
+
+func renderPortSyncUnit(scriptPath string) string {
+	return fmt.Sprintf(`[Unit]
+Description=Synchronize healthy Portly servers with the Code OS gateway
+After=network-online.target cloudflared-code-os.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %s sync
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+`, strconv.Quote(scriptPath))
+}
+
+func renderPortSyncTimer() string {
+	return `[Unit]
+Description=Automatically protect and expose healthy Code OS development ports
+
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=15s
+AccuracySec=2s
+Persistent=true
+Unit=code-os-port-sync.service
+
+[Install]
+WantedBy=timers.target
+`
 }
 
 func renderSkillsSyncTimer() string {

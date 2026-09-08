@@ -1,6 +1,6 @@
 # Code OS Product Context
 
-New VPS install is `$code-vps-setup` (`.agents/skills/code-vps-setup/SKILL.md`). `$code-os` operates a running dashboard only.
+Start at `INSTALLATION.md`. New VPS install is `$code-vps-setup` (`.agents/skills/code-vps-setup/SKILL.md`). `$code-os` operates a running dashboard only.
 
 ## Product
 

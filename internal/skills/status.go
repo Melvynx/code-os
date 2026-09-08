@@ -120,6 +120,9 @@ func (inspector Inspector) Inspect(cfg config.Skills) Status {
 	status.State = deriveState(status)
 	status.Synced = status.State == StateSynced
 	status.Message = stateMessage(status)
+	if status.State == StateDirty || status.State == StateAhead {
+		status.Issues = append(status.Issues, "local unpublished changes are not on origin/"+status.Branch+" yet")
+	}
 	return inspector.withTimer(status)
 }
 
@@ -161,9 +164,9 @@ func stateMessage(status Status) string {
 	case StateBehind:
 		return "Skills checkout is behind origin."
 	case StateAhead:
-		return "Local skills commits are waiting to be pushed."
+		return "origin/" + status.Branch + " is the sync target. Local commits are unpublished; Sync now rebases and pushes."
 	case StateDirty:
-		return "Local skill changes are waiting for the next sync."
+		return "origin/" + status.Branch + " is the sync target. Local unpublished changes are on this machine only; Sync now commits, rebases, and pushes."
 	default:
 		if status.LastSyncAt != nil {
 			return "Skills library is synchronized with origin."

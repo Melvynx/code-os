@@ -1,0 +1,4 @@
+interface:
+  display_name: "Portly"
+  short_description: "Supervise local dev servers with the Portly CLI"
+  default_prompt: "Use $portly to add, start, inspect, or troubleshoot a local dev server. Never launch Vite or pnpm dev directly."

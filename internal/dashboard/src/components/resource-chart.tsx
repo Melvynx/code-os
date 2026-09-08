@@ -9,14 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { EmptyState } from "@/components/page-state"
-import { formatBytes } from "@/lib/format"
+import { formatBytes, matchesQuery } from "@/lib/format"
 import { formatChartTime, formatHistoryWindow, formatMemoryAxis, groupResourceSeries, resourceColor, toChartRows } from "@/lib/resources"
 
-export function ResourceChart() {
+export function ResourceChart({ query = "" }: Readonly<{ query?: string }>) {
   const history = useResourceHistory()
   const [hidden, setHidden] = useState<Record<string, boolean>>({})
 
-  const series = useMemo(() => groupResourceSeries(history.data?.series ?? []), [history.data?.series])
+  const series = useMemo(() => {
+    const grouped = groupResourceSeries(history.data?.series ?? [])
+    if (!query.trim()) return grouped
+    return grouped.filter((item) => matchesQuery(query, [item.name, item.kind]))
+  }, [history.data?.series, query])
   const visibleIds = series.filter((item) => !hidden[item.id]).map((item) => item.id)
   const visible = series.filter((item) => !hidden[item.id])
   const config = useMemo(() => {
@@ -51,7 +55,7 @@ export function ResourceChart() {
           >
             {series.map((item) => (
               <ToggleGroupItem key={item.id} value={item.id} aria-label={item.count > 1 ? `${item.name} (${item.count})` : item.name}>
-                <span aria-hidden="true" className="size-1.5" style={{ backgroundColor: resourceColor(item, series) }} />
+                <span aria-hidden="true" className="size-2 shrink-0" style={{ backgroundColor: resourceColor(item, series) }} />
                 {item.name}
                 {item.count > 1 ? <Badge variant="neutral">{item.count}</Badge> : null}
               </ToggleGroupItem>

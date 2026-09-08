@@ -42,11 +42,8 @@ export function getGitChangeCount(git: GitState) {
 }
 
 export function matchesQuery(query: string, values: Array<string | number | undefined>) {
-  if (!query) return true
-  const normalizedQuery = query.trim().toLocaleLowerCase()
-  return values.some((value) =>
-    String(value ?? "")
-      .toLocaleLowerCase()
-      .includes(normalizedQuery),
-  )
+  const tokens = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  if (!tokens.length) return true
+  const haystack = values.map((value) => String(value ?? "").toLocaleLowerCase())
+  return tokens.every((token) => haystack.some((value) => value.includes(token)))
 }

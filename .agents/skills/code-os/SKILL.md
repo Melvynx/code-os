@@ -18,7 +18,7 @@ Provisioning a new VPS is `$code-vps-setup` only: `.agents/skills/code-vps-setup
 5. Open `/app/skills-sync` for `~/.agents` origin match, timer state, and a same-origin **Sync now**.
 6. Open `/app/status` for image-pipeline health: roots, bypass key mode, decode counts, and authenticated media render.
 
-Keep Git inspection read-only. Use Portly for persistent development processes.
+Keep Git inspection read-only. Use Portly for persistent development processes. `code-os setup` installs Portly, `port{port}.<zone>` remote-webview, and screenshot verify skills from `~/.config/code-os/config.json`. Hosts are never hardcoded.
 
 ## Authenticate the dashboard
 

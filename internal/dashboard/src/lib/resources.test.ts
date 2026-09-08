@@ -39,8 +39,11 @@ describe("resource charts", () => {
   })
 
   it("keeps agent and app colors distinct", () => {
-    expect(resourceColor(history.series[0]!, history.series)).toBe("#0070f3")
-    expect(resourceColor(history.series[1]!, history.series)).toBe("#50e3c2")
+    const cursor = resourceColor(history.series[0]!, history.series)
+    const web = resourceColor(history.series[1]!, history.series)
+    expect(cursor).not.toBe(web)
+    expect(cursor).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(web).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
   it("describes a cached multi-hour window", () => {
