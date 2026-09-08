@@ -1,5 +1,7 @@
 # Code OS Product Context
 
+New VPS install is `$code-vps-setup` (`.agents/skills/code-vps-setup/SKILL.md`). `$code-os` operates a running dashboard only.
+
 ## Product
 
 Code OS is a self-hosted command center that turns a Mac or Linux VPS into a consistent AI-assisted development environment. It discovers projects and subprojects, surfaces Git work in progress, observes and controls Portly-managed applications, groups agent CPU and memory usage, indexes visual evidence, and synchronizes shared agent skills through Git.
@@ -20,11 +22,6 @@ Austere, technical, trustworthy, and fast. The product should feel like an opera
 4. Treat Portly and Git as sources of truth; avoid duplicate process state.
 5. Make keyboard navigation, visible focus, reduced motion, and WCAG 2.2 AA contrast standard.
 6. Make destructive controls explicit, confirmed, and limited to the exact process shown.
-
-## Agent skills
-
-- `$code-vps-setup` (`.agents/skills/code-vps-setup/SKILL.md`) is the only provisioning path for a new VPS.
-- `$code-os` operates an already-running environment. It must not be used to create SSH keys, Cloudflare tokens, or tunnels.
 
 ## Current capabilities
 

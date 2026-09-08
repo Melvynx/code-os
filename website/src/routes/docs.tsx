@@ -48,7 +48,6 @@ function DocsPage() {
           <DocsSection id="overview" title="Overview">
             <p>Code OS is an operational command center for local or remote development machines. It discovers projects and Git worktrees, observes Portly applications and coding agents, indexes screenshots, and serves the result through one authenticated dashboard.</p>
             <div className="notice"><Info /><p><b>Safe boundary</b> Code OS observes project repositories without mutating them. Only the separately configured private skills repository is synchronized by <code>code-os skills-sync</code>.</p></div>
-            <div className="notice"><Info /><p><b>$code-vps-setup</b> First VPS install is <code>.agents/skills/code-vps-setup/SKILL.md</code>. The <code>code-os</code> skill is for a dashboard that already runs.</p></div>
             <Link className="docs-feature-link" to="/skills-sync"><span>NEW GUIDE</span><b>Synchronize skills between your VPS and computer</b><ArrowRight /></Link>
           </DocsSection>
 
@@ -67,7 +66,6 @@ go build -o code-os ./cmd/code-os`}</CodeBlock>
           </DocsSection>
 
           <DocsSection id="setup" title="Setup">
-            <div className="notice"><Info /><p><b>$code-vps-setup</b> Agents installing a new VPS must load <code>.agents/skills/code-vps-setup/SKILL.md</code> only. Do not use the <code>code-os</code> operator skill for SSH keys, Hostinger, Cloudflare tokens, or tunnel install.</p></div>
             <p>The guided flow asks where projects and screenshots live, how Portly is configured, where the dashboard stores its credentials, and which Cloudflare and skills-sync settings belong to this machine.</p>
             <CodeBlock>{`code-os setup
 code-os doctor
@@ -124,7 +122,7 @@ chmod 600 dashboard-password media-bypass-key session-key`}</CodeBlock>
           </DocsSection>
 
           <DocsSection id="cloudflare" title="Cloudflare Tunnel">
-            <p>Agents creating the token and tunnel follow <code>$code-vps-setup</code>. Cloudflare is TLS and ingress only. Authentication is the Code OS login page, the password file, the optional trusted IP, and a separate media bypass key. Do not put Cloudflare Access or Zero Trust in front of the dashboard.</p>
+            <p>Cloudflare is TLS and ingress only. Authentication is the Code OS login page, the password file, the optional trusted IP, and a separate media bypass key. Do not put Cloudflare Access or Zero Trust in front of the dashboard.</p>
             <p>Create the API token from this prefilled URL (Account Settings Read, Cloudflare Tunnel Edit, DNS Edit, Zone Read), then store it in a mode-<code>0600</code> file referenced by <code>cloudflare.tokenFile</code>:</p>
             <CodeBlock>{`https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22argotunnel%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Code%20OS`}</CodeBlock>
             <p>That API token is not the tunnel run token. <code>cloudflared</code> uses a second <code>eyJ…</code> secret from tunnel create, typically <code>/etc/cloudflared/code-os.token</code>.</p>

@@ -1,23 +1,16 @@
 # Code OS
 
+**New VPS setup: `$code-vps-setup`** — `.agents/skills/code-vps-setup/SKILL.md`. That is the only install skill (SSH, Hostinger, Cloudflare token URL, tunnel, `/login`, `?bp=`). Do not load `$code-os` to provision.
+
 Code OS turns a Mac or Linux host into one legible development environment. It discovers repositories, every Git worktree and subproject; observes and controls Portly applications and coding agents; groups screenshots by feature; synchronizes a private skills repository; and exposes the result through one secure service.
 
 Project Git inspection is read-only. Portly remains the process supervisor. Code OS is the only supported transport for the dashboard, private files, screenshots, and tunneled development applications.
 
-## Agent skills
-
-Agents must load **`$code-vps-setup`** for any first-time VPS install. Path: `.agents/skills/code-vps-setup/SKILL.md`. That file owns SSH keys, Hostinger, the prefilled Cloudflare token URL, tunnel install, the custom `/login` page, and media `?bp=`.
-
-Do not load `$code-os` to provision a machine. `$code-os` is for an already-running dashboard only (`.agents/skills/code-os/SKILL.md`).
-
-```text
-$code-vps-setup   First VPS: SSH, Cloudflare token URL, tunnel, login, ?bp=
-$code-os          Operate a machine that already has Code OS
-```
+`$code-os` (`.agents/skills/code-os/SKILL.md`) operates an already-running dashboard only.
 
 ## Quick start
 
-A new Linux VPS is not this command list. Follow `$code-vps-setup` first, then run `code-os setup` with the flags that skill prints.
+A new Linux VPS is `$code-vps-setup`, not this command list. Follow that skill, then run `code-os setup` with the flags it prints.
 
 ```bash
 go build -o bin/code-os ./cmd/code-os
