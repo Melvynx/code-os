@@ -9,16 +9,10 @@ type CPUMark struct {
 	At    time.Time
 }
 
-func cpuPercent(ticks uint64, startTime uint64, previous CPUMark, now time.Time, uptime float64) float64 {
-	if !previous.At.IsZero() && now.After(previous.At) && ticks >= previous.Ticks {
-		elapsed := now.Sub(previous.At).Seconds()
-		if elapsed >= 0.2 {
-			return float64(ticks-previous.Ticks) / clockTicksPerSecond / elapsed * 100
-		}
-	}
+func cpuPercent(ticks uint64, startTime uint64, _ CPUMark, _ time.Time, uptime float64) float64 {
 	lifetime := uptime - float64(startTime)/clockTicksPerSecond
-	if lifetime > 0 {
-		return float64(ticks) / clockTicksPerSecond / lifetime * 100
+	if lifetime <= 0 {
+		return 0
 	}
-	return 0
+	return float64(ticks) / clockTicksPerSecond / lifetime * 100
 }
