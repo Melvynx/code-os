@@ -19,7 +19,13 @@ Start here. This is the only map an agent needs to provision or operate Code OS.
 1. Read this file, then load **only** `$code-vps-setup`.
 2. Collect: VPS IPv4, SSH user (Hostinger is usually `root`), dashboard hostname, zone already on Cloudflare nameservers.
 3. SSH key + `Host` alias. `User` must be explicit.
-4. On the VPS: `code-os` on `PATH`, `cloudflared` at `/usr/local/bin/cloudflared`. Portly is installed by `setup`.
+4. On the VPS: install `code-os` from `releases/latest` (asset `code-os-linux-amd64`), and `cloudflared` at `/usr/local/bin/cloudflared`. Portly is installed by `setup`.
+
+```bash
+curl -fsSL https://github.com/Melvynx/code-os/releases/latest/download/code-os-linux-amd64 -o ~/.local/bin/code-os
+chmod +x ~/.local/bin/code-os
+code-os version   # 0.1.5 or newer
+```
 5. Cloudflare **API token** (the prefilled URL in `$code-vps-setup`). Store at `~/.config/tokens/cloudflare-cli.txt` mode `0600`. Resolve `accountId` and `zoneId`. Never print the token.
 6. `code-os setup --non-interactive` with the flags in `$code-vps-setup`. **Omit `--cloudflare-tunnel-id`** unless `/etc/cloudflared/code-os.token` already exists. Setup creates the tunnel, dashboard CNAME, ingress (dashboard host + `404` only), Portly, screenshot/files dirs at `0700`, and the agent skills.
 7. `code-os service install && code-os doctor`.

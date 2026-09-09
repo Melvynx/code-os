@@ -34,7 +34,7 @@ function DocsPage() {
   return (
     <main className="docs-page">
       <div className="docs-hero container">
-        <span className="section-label">DOCUMENTATION · v0.1.4</span>
+        <span className="section-label">DOCUMENTATION · v0.1.5</span>
         <h1>Build a legible<br />development environment.</h1>
         <p>Install Code OS, connect the tools you already use, and expose one secure command center to humans and coding agents.</p>
       </div>

@@ -96,7 +96,13 @@ install -d -m 700 \
   /root/.local/share/code-os/files
 ```
 
-Install `code-os` from the latest Linux amd64 release (or build from this repo). Put it on `PATH` at `~/.local/bin/code-os` or `/usr/local/bin/code-os`. Never leave it under a `.cleanup-*` path.
+Install `code-os` from the latest Linux amd64 release (asset name `code-os-linux-amd64`, not `stackenv-linux-amd64`). Put it on `PATH` at `~/.local/bin/code-os` or `/usr/local/bin/code-os`. Never leave it under a `.cleanup-*` path.
+
+```bash
+curl -fsSL https://github.com/Melvynx/code-os/releases/latest/download/code-os-linux-amd64 -o ~/.local/bin/code-os
+chmod +x ~/.local/bin/code-os
+code-os version   # must be 0.1.5 or newer — older releases have no Running apps cards
+```
 
 Install `cloudflared` from Cloudflare's Linux package or GitHub release to `/usr/local/bin/cloudflared`. Setup fails if this binary is missing.
 
