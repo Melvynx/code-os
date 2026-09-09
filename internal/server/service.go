@@ -27,6 +27,7 @@ type Service struct {
 	snapshot  model.Snapshot
 	media     map[string]string
 	resources []model.ResourceSample
+	appCPU    map[int]processes.CPUMark
 }
 
 func (service *Service) Refresh(ctx context.Context) model.Snapshot {
@@ -39,6 +40,9 @@ func (service *Service) Refresh(ctx context.Context) model.Snapshot {
 	if err != nil {
 		snapshot.Warnings = append(snapshot.Warnings, err.Error())
 	} else {
+		service.mutex.Lock()
+		service.appCPU = service.Processes.EnrichApplications(applications, service.appCPU, snapshot.GeneratedAt)
+		service.mutex.Unlock()
 		snapshot.Apps = applications
 	}
 	agents, err := service.Processes.Scan()

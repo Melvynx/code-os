@@ -6,6 +6,26 @@ import (
 	"testing"
 )
 
+func TestApplicationTreeSumsChildCPUTicks(t *testing.T) {
+	t.Parallel()
+	items := map[int]process{
+		10: {pid: 10, parentPID: 1, startTime: 1_000, cpuTicks: 10},
+		11: {pid: 11, parentPID: 10, startTime: 1_001, cpuTicks: 90},
+		20: {pid: 20, parentPID: 1, startTime: 1_000, cpuTicks: 5},
+	}
+	children := map[int][]int{}
+	for pid, item := range items {
+		children[item.parentPID] = append(children[item.parentPID], pid)
+	}
+	var ticks uint64
+	for _, pid := range descendants(10, children) {
+		ticks += items[pid].cpuTicks
+	}
+	if ticks != 100 {
+		t.Fatalf("tree ticks = %d, want 100 (parent+child, not the sibling)", ticks)
+	}
+}
+
 func TestAgentProcessesGroupsDescendantResources(t *testing.T) {
 	t.Parallel()
 	items := map[int]process{

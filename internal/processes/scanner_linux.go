@@ -11,11 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/melvynx/code-os/internal/model"
 )
-
-const clockTicksPerSecond = 100
 
 type Scanner struct {
 	ProcRoot string
@@ -29,6 +28,34 @@ type process struct {
 	memory    int64
 	command   string
 	arguments string
+}
+
+func (scanner Scanner) EnrichApplications(applications []model.Application, previous map[int]CPUMark, now time.Time) map[int]CPUMark {
+	processes, uptime, err := scanner.readProcesses()
+	if err != nil {
+		return previous
+	}
+	children := make(map[int][]int)
+	for pid, item := range processes {
+		children[item.parentPID] = append(children[item.parentPID], pid)
+	}
+	next := map[int]CPUMark{}
+	for index := range applications {
+		application := &applications[index]
+		if application.State != "running" || application.PID <= 1 {
+			continue
+		}
+		if _, exists := processes[application.PID]; !exists {
+			continue
+		}
+		var ticks uint64
+		for _, pid := range descendants(application.PID, children) {
+			ticks += processes[pid].cpuTicks
+		}
+		application.CPUPercent = cpuPercent(ticks, processes[application.PID].startTime, previous[application.PID], now, uptime)
+		next[application.PID] = CPUMark{Ticks: ticks, At: now}
+	}
+	return next
 }
 
 func (scanner Scanner) Scan() ([]model.AgentProcess, error) {
