@@ -1,0 +1,4 @@
+{
+  "name": "Code OS",
+  "install": "corepack enable && go mod download && pnpm --dir internal/dashboard install --frozen-lockfile && pnpm --dir website install --frozen-lockfile && go build -o bin/code-os ./cmd/code-os"
+}
