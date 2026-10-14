@@ -36,7 +36,11 @@ func (service *Service) Refresh(ctx context.Context) model.Snapshot {
 	snapshot.Projects = projectsResult
 	snapshot.Warnings = append(snapshot.Warnings, projectWarnings...)
 
-	applications, err := service.Portly.Applications(ctx)
+	// Git scanning may exhaust the snapshot deadline. Check Portly with its own
+	// bounded deadline so the gateway uses a fresh, fail-closed app inventory.
+	portlyContext, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	applications, err := service.Portly.Applications(portlyContext)
 	if err != nil {
 		snapshot.Warnings = append(snapshot.Warnings, err.Error())
 	} else {
